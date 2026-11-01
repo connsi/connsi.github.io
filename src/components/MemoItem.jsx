@@ -22,7 +22,6 @@ export default function MemoItem({ memo, onUpdate, onDelete }) {
 
   return (
     <li className="memo">
-      <h3>{memo.title || '(제목 없음)'}</h3>
       <p>{memo.content}</p>
       <div className="meta">
         <time>{new Date(memo.updatedAt).toLocaleString()}</time>
