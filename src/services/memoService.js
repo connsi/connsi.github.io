@@ -1,13 +1,23 @@
 // 메모 데이터 접근 계층
-// 지금은 localStorage에 저장합니다. Firestore를 붙일 때는 이 파일의
-// 함수 내부만 바꾸면 되고, 컴포넌트/훅은 수정할 필요가 없습니다.
-// 각 함수의 첫 인자 _uid 는 Firestore 전환 시 사용자별 경로에 쓰입니다.
-//
-// Firestore로 바꿀 때의 예시:
-//   import { collection, addDoc, ... } from 'firebase/firestore'
-//   import { db } from '../firebase/config'
-//   경로: users/{uid}/memos/{memoId}
+// - Firebase가 설정되어 있고 로그인한 경우: Firestore (users/{uid}/memos/{memoId})
+// - 그 외(로컬 모드): 브라우저 localStorage
+// 컴포넌트/훅은 어느 저장소를 쓰는지 몰라도 됩니다.
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  orderBy,
+  query,
+  setDoc,
+  updateDoc,
+} from 'firebase/firestore'
+import { db } from '../firebase/config'
 
+const isCloud = (uid) => Boolean(db && uid)
+const memosCol = (uid) => collection(db, 'users', uid, 'memos')
+
+// ---------- localStorage ----------
 const STORAGE_KEY = 'memo-app:memos'
 
 function readAll() {
@@ -29,24 +39,40 @@ function writeAll(memos) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(memos))
 }
 
-export async function getMemos(_uid) {
+// ---------- 공개 함수 ----------
+export async function getMemos(uid) {
+  if (isCloud(uid)) {
+    const snap = await getDocs(query(memosCol(uid), orderBy('updatedAt', 'desc')))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  }
   return readAll().sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
-export async function createMemo(_uid, { content }) {
+export async function createMemo(uid, { content }) {
   const now = Date.now()
   const memo = { id: crypto.randomUUID(), content, createdAt: now, updatedAt: now }
-  writeAll([memo, ...readAll()])
+  if (isCloud(uid)) {
+    const { id, ...data } = memo
+    await setDoc(doc(memosCol(uid), id), data)
+  } else {
+    writeAll([memo, ...readAll()])
+  }
   return memo
 }
 
-export async function updateMemo(_uid, id, { content }) {
-  const memos = readAll().map((m) =>
-    m.id === id ? { ...m, content, updatedAt: Date.now() } : m,
-  )
-  writeAll(memos)
+export async function updateMemo(uid, id, { content }) {
+  const updatedAt = Date.now()
+  if (isCloud(uid)) {
+    await updateDoc(doc(memosCol(uid), id), { content, updatedAt })
+    return
+  }
+  writeAll(readAll().map((m) => (m.id === id ? { ...m, content, updatedAt } : m)))
 }
 
-export async function deleteMemo(_uid, id) {
+export async function deleteMemo(uid, id) {
+  if (isCloud(uid)) {
+    await deleteDoc(doc(memosCol(uid), id))
+    return
+  }
   writeAll(readAll().filter((m) => m.id !== id))
 }

@@ -6,8 +6,9 @@ export default function MemoEditor({ initial = { content: '' }, onSubmit, onCanc
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!content.trim()) return
-    await onSubmit({ content })
-    if (!onCancel) setContent('')
+    const ok = await onSubmit({ content })
+    // 실패하면 입력한 내용을 지우지 않습니다.
+    if (ok !== false && !onCancel) setContent('')
   }
 
   return (

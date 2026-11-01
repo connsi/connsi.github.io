@@ -23,18 +23,21 @@ export function useMemos() {
 
   const refresh = async () => setMemos(await memoService.getMemos(uid))
 
-  const addMemo = async (data) => {
-    await memoService.createMemo(uid, data)
-    await refresh()
+  // 저장 공간 초과, 네트워크 오류 등으로 실패하면 알리고 false 를 돌려줍니다.
+  const run = async (action) => {
+    try {
+      await action()
+      await refresh()
+      return true
+    } catch (e) {
+      alert(`저장하지 못했습니다.\n${e.message}`)
+      return false
+    }
   }
-  const editMemo = async (id, data) => {
-    await memoService.updateMemo(uid, id, data)
-    await refresh()
-  }
-  const removeMemo = async (id) => {
-    await memoService.deleteMemo(uid, id)
-    await refresh()
-  }
+
+  const addMemo = (data) => run(() => memoService.createMemo(uid, data))
+  const editMemo = (id, data) => run(() => memoService.updateMemo(uid, id, data))
+  const removeMemo = (id) => run(() => memoService.deleteMemo(uid, id))
 
   return { memos, loading, addMemo, editMemo, removeMemo }
 }
