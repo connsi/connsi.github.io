@@ -88,9 +88,9 @@ connsi.github.io/
    import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
    import { db } from '../firebase/config'
 
-   export async function createMemo(uid, { title, content }) {
+   export async function createMemo(uid, { content }) {
      return addDoc(collection(db, 'users', uid, 'memos'), {
-       title, content, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+       content, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
      })
    }
    ```

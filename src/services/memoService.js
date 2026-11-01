@@ -12,10 +12,17 @@ const STORAGE_KEY = 'memo-app:memos'
 
 function readAll() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? []
+    const memos = JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? []
+    return memos.map(fromLegacy)
   } catch {
     return []
   }
+}
+
+// 예전에 제목을 따로 저장한 메모는 제목을 내용 첫 줄로 합칩니다.
+function fromLegacy({ title, ...memo }) {
+  if (!title) return memo
+  return { ...memo, content: memo.content ? `${title}\n${memo.content}` : title }
 }
 
 function writeAll(memos) {
@@ -26,16 +33,16 @@ export async function getMemos(_uid) {
   return readAll().sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
-export async function createMemo(_uid, { title, content }) {
+export async function createMemo(_uid, { content }) {
   const now = Date.now()
-  const memo = { id: crypto.randomUUID(), title, content, createdAt: now, updatedAt: now }
+  const memo = { id: crypto.randomUUID(), content, createdAt: now, updatedAt: now }
   writeAll([memo, ...readAll()])
   return memo
 }
 
-export async function updateMemo(_uid, id, { title, content }) {
+export async function updateMemo(_uid, id, { content }) {
   const memos = readAll().map((m) =>
-    m.id === id ? { ...m, title, content, updatedAt: Date.now() } : m,
+    m.id === id ? { ...m, content, updatedAt: Date.now() } : m,
   )
   writeAll(memos)
 }
