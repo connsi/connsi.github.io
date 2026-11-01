@@ -1,7 +1,7 @@
 # 메모 앱 (React + Vite)
 
-React + Vite로 만든 메모 웹 앱입니다. 지금은 브라우저 `localStorage`에 저장하고,
-나중에 Firebase(Authentication, Firestore)를 붙일 수 있도록 구조를 잡아 두었습니다.
+React + Vite로 만든 메모 웹 앱입니다. Firebase를 설정하면 Google 로그인 후 Firestore에 저장하고,
+설정하지 않으면 브라우저 `localStorage`에 저장하는 로컬 모드로 동작합니다.
 
 ## 실행 방법
 
@@ -42,6 +42,8 @@ connsi.github.io/
 ├── index.html
 ├── vite.config.js
 ├── .env.example            # Firebase 설정값 예시 (복사해서 .env.local 로 사용)
+├── firebase.json           # Firebase CLI/에뮬레이터 설정
+├── firestore.rules         # Firestore 보안 규칙
 ├── public/                 # 그대로 복사되는 정적 파일 (favicon 등)
 └── src/
     ├── main.jsx            # 진입점
@@ -49,8 +51,8 @@ connsi.github.io/
     ├── index.css           # 전역 스타일
     ├── firebase/
     │   └── config.js       # Firebase 초기화 (auth, db 내보냄)
-    ├── services/           # 데이터/인증 접근 계층 ← Firebase 연결 시 여기만 수정
-    │   ├── memoService.js  #   메모 CRUD (현재 localStorage)
+    ├── services/           # 데이터/인증 접근 계층
+    │   ├── memoService.js  #   메모 CRUD (Firestore / localStorage)
     │   └── authService.js  #   로그인/로그아웃 (Firebase Auth)
     ├── contexts/
     │   └── AuthContext.jsx # 로그인 사용자 전역 상태
@@ -71,39 +73,43 @@ connsi.github.io/
 데이터 흐름: `pages` → `hooks` → `services` → (localStorage | Firebase).
 컴포넌트는 저장소가 무엇인지 모르기 때문에 Firestore로 바꿔도 UI 코드는 그대로입니다.
 
-## Firebase 연결하기 (나중에)
+## Firebase 연결하기
 
-1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 생성 → 웹 앱 추가
-2. **Authentication** → 로그인 방법에서 **Google** 사용 설정
-   (배포 도메인은 Authentication → 설정 → 승인된 도메인에 추가)
-3. **Firestore Database** 생성
-4. 설정값 넣기:
-   ```bash
-   cp .env.example .env.local   # 값 채우기 (.env.local 은 git에 올라가지 않음)
-   ```
-5. 개발 서버를 다시 시작하면 헤더의 "로컬 모드" 표시가 사라지고 로그인이 필요해집니다.
-6. `src/services/memoService.js`의 함수들을 Firestore 호출로 바꿉니다
-   (경로 예: `users/{uid}/memos/{memoId}`). 예시:
-   ```js
-   import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-   import { db } from '../firebase/config'
+코드는 이미 Firebase(Google 로그인 + Firestore)를 지원합니다. 설정값만 넣으면 바로 동작합니다.
+설정값이 없으면 지금처럼 로컬 모드(브라우저에 저장)로 동작합니다.
 
-   export async function createMemo(uid, { content }) {
-     return addDoc(collection(db, 'users', uid, 'memos'), {
-       content, createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-     })
-   }
-   ```
-7. Firestore 보안 규칙으로 본인 메모만 접근하도록 제한합니다:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid}/memos/{memoId} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
-   ```
+- 로그인한 사용자의 메모는 Firestore `users/{uid}/memos/{memoId}` 에 저장됩니다.
+- 보안 규칙(`firestore.rules`): 본인 메모만 읽고 쓸 수 있습니다.
 
-> 참고: Firebase 웹 설정값(apiKey 등)은 공개되어도 되는 값입니다. 실제 보안은 위의 보안 규칙이 담당합니다.
+### 1. Firebase 프로젝트 만들기
+1. [Firebase 콘솔](https://console.firebase.google.com)에서 **프로젝트 만들기**
+2. 프로젝트 개요의 **웹(`</>`) 아이콘**으로 웹 앱 추가 → 화면에 나오는 `firebaseConfig` 값을 복사해 둡니다.
+3. **Authentication → 시작하기 → 로그인 방법 → Google** 사용 설정
+4. **Authentication → 설정 → 승인된 도메인**에 `connsi.github.io` 추가
+5. **Firestore Database → 데이터베이스 만들기** (프로덕션 모드)
+6. **Firestore Database → 규칙** 탭에 `firestore.rules` 내용을 붙여넣고 **게시**
+
+### 2. 배포된 사이트에 연결
+저장소 **Settings → Secrets and variables → Actions → New repository secret** 에서 아래 6개를 등록합니다.
+
+| Secret 이름 | firebaseConfig 항목 |
+| --- | --- |
+| `VITE_FIREBASE_API_KEY` | `apiKey` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | `authDomain` |
+| `VITE_FIREBASE_PROJECT_ID` | `projectId` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
+| `VITE_FIREBASE_APP_ID` | `appId` |
+
+등록 후 Actions 탭에서 **Deploy to GitHub Pages → Run workflow** 로 다시 배포하면 적용됩니다.
+
+### 3. 로컬 개발에서 사용 (선택)
+```bash
+cp .env.example .env.local   # 같은 값 채우기 (.env.local 은 git에 올라가지 않음)
+npm run dev
+```
+
+에뮬레이터로 테스트하려면 `.env.local` 에 `VITE_USE_FIREBASE_EMULATOR=true` 를 넣고
+`npx firebase-tools emulators:start --only auth,firestore --project demo-memo` 를 함께 실행합니다.
+
+> 참고: Firebase 웹 설정값(apiKey 등)은 브라우저에 그대로 노출되는 공개 값입니다. 실제 보안은 보안 규칙이 담당합니다.

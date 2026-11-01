@@ -12,8 +12,7 @@ export default function MemoItem({ memo, onUpdate, onDelete }) {
           submitLabel="수정"
           onCancel={() => setEditing(false)}
           onSubmit={async (data) => {
-            await onUpdate(memo.id, data)
-            setEditing(false)
+            if (await onUpdate(memo.id, data)) setEditing(false)
           }}
         />
       </li>
