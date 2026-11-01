@@ -1,0 +1,72 @@
+# main 브랜치에 푸시하면 사이트 전체를 GitHub Pages에 배포합니다.
+#   - 루트의 기존 파일(index.html 등) → https://connsi.github.io/
+#   - memo-app 빌드 결과            → https://connsi.github.io/memo-app/
+#
+# 사전 설정: 저장소 Settings → Pages → Build and deployment → Source 를 "GitHub Actions" 로 변경
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: memo-app/package-lock.json
+
+      - name: Install & lint & build memo-app
+        working-directory: memo-app
+        # Firebase 설정값: Settings → Secrets and variables → Actions 에 등록하면 사용됩니다.
+        # 등록하지 않으면 앱은 로컬 모드(localStorage)로 동작합니다.
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+        run: |
+          npm ci
+          npm run lint
+          npm run build
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          # 루트의 기존 파일(git에 커밋된 것만)을 복사하고, memo-app 빌드 결과를 하위 폴더에 넣습니다.
+          git ls-files | grep -v -e '^memo-app/' -e '^\.github/' | xargs -d '\n' -I{} cp --parents {} _site/
+          cp -r memo-app/dist _site/memo-app
+          ls -R _site | head -30
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
