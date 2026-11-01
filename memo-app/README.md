@@ -20,6 +20,20 @@ npm run dev      # 개발 서버 실행 → http://localhost:5173
 | `npm run preview` | 빌드 결과를 로컬에서 미리보기 |
 | `npm run lint` | 코드 검사 (oxlint) |
 
+## 배포 (GitHub Pages)
+
+`main` 브랜치에 푸시하면 GitHub Actions(`.github/workflows/deploy.yml`)가 앱을 빌드해서
+**https://connsi.github.io/memo-app/** 에 배포합니다. 루트의 기존 페이지도 함께 배포됩니다.
+
+처음 한 번만 설정이 필요합니다:
+- 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 변경
+
+Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 직접 다시 실행할 수도 있습니다(Run workflow).
+
+Firebase를 붙인 뒤에는 배포된 앱에서도 Firebase를 쓰도록
+**Settings → Secrets and variables → Actions** 에 `.env.example`과 같은 이름(`VITE_FIREBASE_*`)으로
+값을 등록하세요. 등록하지 않으면 배포된 앱은 로컬 모드로 동작합니다.
+
 ## 폴더 구조
 
 ```
