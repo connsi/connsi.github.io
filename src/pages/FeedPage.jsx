@@ -7,7 +7,7 @@ import { useFeed } from '../hooks/useMemos'
 
 const PAGES = {
   all: { title: '전체 메모', hideTitle: true, empty: '아직 메모가 없습니다.' },
-  mine: { title: '🔒 나만 보기', empty: '아직 나만 보는 메모가 없습니다.' },
+  mine: { title: '🔒 나만보기', empty: '아직 나만 보는 메모가 없습니다.' },
   public: { title: '🌐 둘러보기', empty: '아직 공개된 메모가 없습니다.' },
 }
 
