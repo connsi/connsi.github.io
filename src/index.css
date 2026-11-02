@@ -39,7 +39,7 @@ a { color: var(--primary-text); text-decoration: none; }
 .tab { font-size: 14px; color: var(--muted); padding: 2px 0; border-bottom: 2px solid transparent; }
 .tab.active { color: var(--text); border-bottom-color: var(--primary); }
 .page-title { font-size: 18px; margin: 0 0 12px; }
-/* 입력창 바로 아래 제목은 위쪽 여백을 줍니다 (비공개 화면) */
+/* 입력창 바로 아래 제목은 위쪽 여백을 줍니다 (나만 보기 화면) */
 .editor + .page-title { margin-top: 28px; }
 /* 눈에는 안 보이고 화면 읽기 프로그램에는 읽히는 요소 */
 .sr-only {
