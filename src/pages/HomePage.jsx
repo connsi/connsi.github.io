@@ -1,9 +1,9 @@
 import MemoEditor from '../components/MemoEditor'
 import MemoList from '../components/MemoList'
-import { useMemos } from '../hooks/useMemos'
+import { useMyMemos } from '../hooks/useMemos'
 
 export default function HomePage() {
-  const { memos, loading, error, addMemo, editMemo, removeMemo } = useMemos('mine')
+  const { memos, loading, error, addMemo, editMemo, removeMemo } = useMyMemos()
 
   return (
     <>

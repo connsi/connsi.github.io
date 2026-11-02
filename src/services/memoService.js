@@ -1,28 +1,44 @@
 // 메모 데이터 접근 계층
-// - Firebase가 설정된 경우: Firestore 최상위 컬렉션 memos/{memoId}
-//     { uid, authorName, content, isPublic, createdAt, updatedAt }
-//   · 내 메모: uid == 내 uid
-//   · 공개 메모: isPublic == true (누구나 읽기 가능)
-// - 그 외(로컬 모드): 브라우저 localStorage
-// 쿼리는 조건 하나만 쓰고 정렬은 브라우저에서 해서, Firestore 복합 색인이 필요 없습니다.
+// - Firebase가 설정된 경우: Firestore
+//     memos/{memoId}  { uid, authorName, content, isPublic, createdAt, updatedAt }
+//     usage/{uid}     { day: 20261102, chars: 1234 }  ← 오늘(한국 시간) 쓴 글자 수
+//   · 내 메모: uid == 내 uid (브라우저에서 정렬)
+//   · 공개 메모: isPublic == true, 최신순 20개씩 (복합 색인 필요: isPublic + updatedAt desc)
+//   · 하루 글자 제한: 새 메모는 글자 수 전체, 수정은 늘어난 글자 수만큼 오늘 사용량에 더합니다.
+//     보안 규칙(firestore.rules)이 서버에서도 같은 계산을 검사합니다.
+// - 그 외(로컬 모드): 브라우저 localStorage (글자 제한 없음)
 import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
-  setDoc,
+  startAfter,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { signupId } from '../utils/authorId'
+import { charCount, DAILY_CHAR_LIMIT } from '../utils/text'
+
+export const PAGE_SIZE = 20
 
 const isCloud = (user) => Boolean(db && user)
 const memosCol = () => collection(db, 'memos')
+const usageRef = (uid) => doc(db, 'usage', uid)
 const byNewest = (a, b) => b.updatedAt - a.updatedAt
 // 공개 메모에는 Google 이름 대신 가입 일시 번호를 보여줍니다.
 const authorNameOf = (user) => signupId(user)
+
+// 오늘 날짜(한국 시간)를 20261102 같은 숫자로. 보안 규칙의 today() 와 같은 계산입니다.
+export function todayKey(now = Date.now()) {
+  const kst = new Date(now + 9 * 60 * 60 * 1000)
+  return kst.getUTCFullYear() * 10000 + (kst.getUTCMonth() + 1) * 100 + kst.getUTCDate()
+}
 
 // ---------- localStorage ----------
 const STORAGE_KEY = 'memo-app:memos'
@@ -47,25 +63,29 @@ function writeAll(memos) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(memos))
 }
 
-// ---------- 예전 Firestore 위치(users/{uid}/memos)에서 옮기기 ----------
-const migrated = new Set()
+// ---------- 하루 글자 사용량 ----------
+// 오늘 이미 쓴 글자 수
+async function getUsedToday(user) {
+  const snap = await getDoc(usageRef(user.uid))
+  const data = snap.exists() ? snap.data() : null
+  return data && data.day === todayKey() ? data.chars : 0
+}
 
-async function migrateLegacy(user) {
-  if (migrated.has(user.uid)) return
-  const old = await getDocs(collection(db, 'users', user.uid, 'memos'))
-  for (const d of old.docs) {
-    const data = d.data()
-    await setDoc(doc(memosCol(), d.id), {
-      uid: user.uid,
-      authorName: authorNameOf(user),
-      content: data.content ?? '',
-      isPublic: false,
-      createdAt: data.createdAt ?? Date.now(),
-      updatedAt: data.updatedAt ?? Date.now(),
-    })
-    await deleteDoc(d.ref)
+class DailyLimitError extends Error {}
+
+// 글자 사용량을 더한 새 값을 계산합니다. 한도를 넘으면 오류를 냅니다.
+async function chargeChars(user, added) {
+  if (added <= 0) return null
+  const used = await getUsedToday(user)
+  const next = used + added
+  if (next > DAILY_CHAR_LIMIT) {
+    const left = Math.max(0, DAILY_CHAR_LIMIT - used)
+    throw new DailyLimitError(
+      `하루에 쓸 수 있는 글자(${DAILY_CHAR_LIMIT.toLocaleString()}자)를 넘었어요.\n` +
+        `오늘 남은 글자: ${left.toLocaleString()}자 (이번 메모: ${added.toLocaleString()}자)`,
+    )
   }
-  migrated.add(user.uid)
+  return { day: todayKey(), chars: next }
 }
 
 // 예전에 Google 이름으로 저장된 작성자 이름을 지금 규칙(가입 일시 번호)으로 바꿉니다.
@@ -85,8 +105,6 @@ async function syncAuthorName(user, memos) {
 // ---------- 공개 함수 ----------
 export async function getMyMemos(user) {
   if (isCloud(user)) {
-    // 옮기기에 실패해도 메모 목록은 계속 보여줍니다 (다음 접속 때 다시 시도).
-    await migrateLegacy(user).catch((e) => console.warn('예전 메모 옮기기 실패:', e))
     const snap = await getDocs(query(memosCol(), where('uid', '==', user.uid)))
     const memos = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     await syncAuthorName(user, memos)
@@ -95,19 +113,36 @@ export async function getMyMemos(user) {
   return readAll().sort(byNewest)
 }
 
-export async function getPublicMemos() {
+// 공개 메모를 최신순으로 PAGE_SIZE 개씩 가져옵니다.
+// cursor: 이전 페이지가 돌려준 next 값 (첫 페이지는 생략)
+// 반환: { memos, next }  next 가 null 이면 더 없음
+export async function getPublicMemos(cursor = null) {
   if (db) {
-    const snap = await getDocs(query(memosCol(), where('isPublic', '==', true)))
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byNewest)
+    const parts = [where('isPublic', '==', true), orderBy('updatedAt', 'desc')]
+    if (cursor) parts.push(startAfter(cursor))
+    parts.push(limit(PAGE_SIZE + 1)) // 하나 더 읽어서 다음 페이지가 있는지 확인
+    const snap = await getDocs(query(memosCol(), ...parts))
+    const docs = snap.docs.slice(0, PAGE_SIZE)
+    return {
+      memos: docs.map((d) => ({ id: d.id, ...d.data() })),
+      next: snap.docs.length > PAGE_SIZE ? docs[docs.length - 1] : null,
+    }
   }
-  return readAll().filter((m) => m.isPublic).sort(byNewest)
+  const all = readAll().filter((m) => m.isPublic).sort(byNewest)
+  const start = cursor ?? 0
+  return {
+    memos: all.slice(start, start + PAGE_SIZE),
+    next: all.length > start + PAGE_SIZE ? start + PAGE_SIZE : null,
+  }
 }
 
 export async function createMemo(user, { content, isPublic = false }) {
   const now = Date.now()
   const id = crypto.randomUUID()
   if (isCloud(user)) {
-    await setDoc(doc(memosCol(), id), {
+    const usage = await chargeChars(user, charCount(content))
+    const batch = writeBatch(db)
+    batch.set(doc(memosCol(), id), {
       uid: user.uid,
       authorName: authorNameOf(user),
       content,
@@ -115,15 +150,24 @@ export async function createMemo(user, { content, isPublic = false }) {
       createdAt: now,
       updatedAt: now,
     })
-  } else {
-    writeAll([{ id, content, isPublic, createdAt: now, updatedAt: now }, ...readAll()])
+    if (usage) batch.set(usageRef(user.uid), usage)
+    await batch.commit()
+    return
   }
+  writeAll([{ id, content, isPublic, createdAt: now, updatedAt: now }, ...readAll()])
 }
 
 export async function updateMemo(user, id, { content, isPublic }) {
   const updatedAt = Date.now()
   if (isCloud(user)) {
-    await updateDoc(doc(memosCol(), id), { content, isPublic, authorName: authorNameOf(user), updatedAt })
+    const ref = doc(memosCol(), id)
+    const before = await getDoc(ref)
+    const added = charCount(content) - charCount(before.data()?.content)
+    const usage = await chargeChars(user, added)
+    const batch = writeBatch(db)
+    batch.update(ref, { content, isPublic, authorName: authorNameOf(user), updatedAt })
+    if (usage) batch.set(usageRef(user.uid), usage)
+    await batch.commit()
     return
   }
   writeAll(readAll().map((m) => (m.id === id ? { ...m, content, isPublic, updatedAt } : m)))

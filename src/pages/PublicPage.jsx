@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom'
 import MemoList from '../components/MemoList'
 import { useAuth } from '../contexts/AuthContext'
 import { isFirebaseConfigured } from '../firebase/config'
-import { useMemos } from '../hooks/useMemos'
+import { usePublicMemos } from '../hooks/useMemos'
 
 // 모두의 공개 메모 (로그인하지 않아도 볼 수 있음)
 export default function PublicPage() {
-  const { memos, loading, error } = useMemos('public')
+  const { memos, loading, loadingMore, error, hasMore, loadMore } = usePublicMemos()
   const { user, loading: authLoading } = useAuth()
   const isGuest = isFirebaseConfigured && !authLoading && !user
 
@@ -22,7 +22,14 @@ export default function PublicPage() {
       {loading ? (
         <p className="empty">불러오는 중…</p>
       ) : (
-        <MemoList memos={memos} readOnly showAuthor emptyText="아직 공개된 메모가 없습니다." />
+        <>
+          <MemoList memos={memos} readOnly showAuthor emptyText="아직 공개된 메모가 없습니다." />
+          {hasMore && (
+            <div className="more">
+              <button onClick={loadMore} disabled={loadingMore}>{loadingMore ? '불러오는 중…' : '더 보기'}</button>
+            </div>
+          )}
+        </>
       )}
     </>
   )

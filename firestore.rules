@@ -2,7 +2,29 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 메모: 공개 메모는 누구나 읽을 수 있고, 비공개 메모는 작성자만 읽을 수 있습니다.
+    // 오늘 날짜(한국 시간)를 20261102 같은 숫자로
+    function today() {
+      let t = request.time + duration.value(9, 'h');
+      return t.year() * 10000 + t.month() * 100 + t.day();
+    }
+
+    // ---------- 하루 글자 사용량: usage/{uid} = { day, chars } ----------
+    // 본인만 읽고 쓸 수 있고, 오늘 날짜로만 기록하며, 1만 자를 넘을 수 없고,
+    // 같은 날 안에서는 줄일 수 없습니다(사용량을 0으로 되돌리는 꼼수 방지).
+    match /usage/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['day', 'chars'])
+        && request.resource.data.day == today()
+        && request.resource.data.chars is int
+        && request.resource.data.chars <= 10000
+        && (resource == null
+            || resource.data.day != today()
+            || request.resource.data.chars >= resource.data.chars);
+    }
+
+    // ---------- 메모 ----------
+    // 공개 메모는 누구나 읽을 수 있고, 비공개 메모는 작성자만 읽을 수 있습니다.
     // 쓰기(작성/수정/삭제)는 작성자 본인만 가능합니다.
     match /memos/{memoId} {
       function isOwner(data) {
@@ -14,16 +36,34 @@ service cloud.firestore {
           && data.authorName is string
           && data.updatedAt is number;
       }
+      function usagePath() {
+        return /databases/$(database)/documents/usage/$(request.auth.uid);
+      }
+      // 이번 쓰기 전에 오늘 이미 쓴 글자 수
+      function usedBefore() {
+        return (exists(usagePath()) && get(usagePath()).data.day == today())
+          ? get(usagePath()).data.chars : 0;
+      }
+      // 늘어난 글자 수(added)만큼 같은 쓰기 묶음(batch)에서 사용량이 정확히 늘었는지 확인합니다.
+      // (사용량 문서 규칙이 1만 자를 넘지 못하게 막습니다)
+      function charged(added) {
+        return added <= 0
+          || (getAfter(usagePath()).data.day == today()
+              && getAfter(usagePath()).data.chars == usedBefore() + added);
+      }
 
       allow read: if resource.data.isPublic == true || isOwner(resource.data);
-      allow create: if isOwner(request.resource.data) && isValid(request.resource.data);
+      allow create: if isOwner(request.resource.data)
+        && isValid(request.resource.data)
+        && charged(request.resource.data.content.size());
       allow update: if isOwner(resource.data)
         && request.resource.data.uid == resource.data.uid
-        && isValid(request.resource.data);
+        && isValid(request.resource.data)
+        && charged(request.resource.data.content.size() - resource.data.content.size());
       allow delete: if isOwner(resource.data);
     }
 
-    // 예전 저장 위치. 새 위치(memos)로 옮기기 위해 본인 읽기/삭제만 허용합니다.
+    // 예전 저장 위치. 본인 읽기/삭제만 허용합니다.
     match /users/{uid}/memos/{memoId} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
     }

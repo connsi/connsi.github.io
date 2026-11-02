@@ -1,9 +1,10 @@
 import { useState } from 'react'
+import { fullDateTime, relativeTime } from '../utils/relativeTime'
 import MemoEditor from './MemoEditor'
 
 // readOnly: 공개 메모 화면처럼 수정/삭제 버튼 없이 보여줄 때
 // showAuthor: 작성자 이름 표시
-export default function MemoItem({ memo, onUpdate, onDelete, readOnly = false, showAuthor = false }) {
+export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = false, showAuthor = false }) {
   const [editing, setEditing] = useState(false)
 
   if (editing) {
@@ -30,7 +31,9 @@ export default function MemoItem({ memo, onUpdate, onDelete, readOnly = false, s
         <span className="info">
           {showAuthor && <span className="author">{memo.authorName || '익명'}</span>}
           {!readOnly && <span className={`tag ${memo.isPublic ? 'public' : ''}`}>{memo.isPublic ? '🌐 공개' : '🔒 비공개'}</span>}
-          <time>{new Date(memo.updatedAt).toLocaleString()}</time>
+          <time dateTime={new Date(memo.updatedAt).toISOString()} title={fullDateTime(memo.updatedAt)}>
+            {relativeTime(memo.updatedAt, now)}
+          </time>
         </span>
         {!readOnly && (
           <div className="actions">
