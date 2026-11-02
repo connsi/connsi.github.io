@@ -3,7 +3,7 @@
 // 없으면 null 을 내보내서 앱이 로컬 모드(localStorage)로 동작합니다.
 import { initializeApp } from 'firebase/app'
 import { connectAuthEmulator, getAuth } from 'firebase/auth'
-import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore/lite'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
