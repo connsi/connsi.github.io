@@ -6,7 +6,7 @@ import { isFirebaseConfigured } from '../firebase/config'
 import { useFeed } from '../hooks/useMemos'
 
 const PAGES = {
-  all: { title: '전체 메모', empty: '아직 메모가 없습니다.' },
+  all: { title: '전체 메모', hideTitle: true, empty: '아직 메모가 없습니다.' },
   mine: { title: '🔒 비공개 메모', empty: '아직 비공개 메모가 없습니다.' },
   public: { title: '🌐 공개 메모', empty: '아직 공개된 메모가 없습니다.' },
 }
@@ -27,7 +27,8 @@ export default function FeedPage({ mode }) {
         </p>
       )}
       {canWrite && mode !== 'public' && <MemoEditor onSubmit={addMemo} submitLabel="추가" />}
-      <h2 className="page-title">{page.title}</h2>
+      {/* 전체 화면은 제목을 눈에 보이지 않게(화면 읽기 프로그램에는 읽히게) 둡니다 */}
+      <h2 className={page.hideTitle ? 'sr-only' : 'page-title'}>{page.title}</h2>
       {error && <p className="error">메모를 불러오지 못했습니다: {error}</p>}
       {loading ? (
         <p className="empty">불러오는 중…</p>
