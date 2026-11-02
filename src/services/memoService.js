@@ -7,6 +7,9 @@
 //   · 하루 글자 제한: 새 메모는 글자 수 전체, 수정은 늘어난 글자 수만큼 오늘 사용량에 더합니다.
 //     보안 규칙(firestore.rules)이 서버에서도 같은 계산을 검사합니다.
 // - 그 외(로컬 모드): 브라우저 localStorage (글자 제한 없음)
+//
+// 첫 화면을 빠르게 띄우려고 가벼운 Firestore Lite 를 씁니다 (오프라인 저장·실시간 갱신 없음).
+// 실시간 갱신(onSnapshot)이 필요해지면 'firebase/firestore' 로 되돌리면 됩니다.
 import {
   collection,
   deleteDoc,
@@ -20,7 +23,7 @@ import {
   updateDoc,
   where,
   writeBatch,
-} from 'firebase/firestore'
+} from 'firebase/firestore/lite'
 import { db } from '../firebase/config'
 import { signupId } from '../utils/authorId'
 import { charCount, DAILY_CHAR_LIMIT } from '../utils/text'
