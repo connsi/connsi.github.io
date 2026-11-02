@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { fullDateTime, relativeTime } from '../utils/relativeTime'
 import MemoEditor from './MemoEditor'
+import MoreMenu from './MoreMenu'
 
-// readOnly: 공개 메모 화면처럼 수정/삭제 버튼 없이 보여줄 때
+// readOnly: 공개 메모 화면처럼 수정/삭제 메뉴 없이 보여줄 때
 // showAuthor: 작성자 이름 표시
 export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = false, showAuthor = false }) {
   const [editing, setEditing] = useState(false)
@@ -30,16 +31,26 @@ export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = fal
       <div className="meta">
         <span className="info">
           {showAuthor && <span className="author">{memo.authorName || '익명'}</span>}
-          {!readOnly && <span className={`tag ${memo.isPublic ? 'public' : ''}`}>{memo.isPublic ? '🌐 공개' : '🔒 비공개'}</span>}
+          {!readOnly && !memo.isPublic && (
+            <span className="lock" role="img" aria-label="비공개" title="비공개">
+              <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                <rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </span>
+          )}
           <time dateTime={new Date(memo.updatedAt).toISOString()} title={fullDateTime(memo.updatedAt)}>
             {relativeTime(memo.updatedAt, now)}
           </time>
         </span>
         {!readOnly && (
-          <div className="actions">
-            <button onClick={() => setEditing(true)}>수정</button>
-            <button className="danger" onClick={() => confirm('삭제할까요?') && onDelete(memo.id)}>삭제</button>
-          </div>
+          <MoreMenu
+            label="메모 메뉴"
+            items={[
+              { label: '수정', onSelect: () => setEditing(true) },
+              { label: '삭제', danger: true, onSelect: () => confirm('삭제할까요?') && onDelete(memo.id) },
+            ]}
+          />
         )}
       </div>
     </li>
