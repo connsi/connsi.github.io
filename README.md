@@ -24,10 +24,15 @@ React + Vite로 만든 메모 웹 앱입니다. Google 계정으로 로그인하
 - 공개 메모는 20개씩 **더 보기**로 이어서 불러옵니다
 - 3줄이 넘는 긴 메모는 말줄임(…)으로 줄여 보여주고, **더보기 / 접기**로 펼치고 접을 수 있습니다
 
-## 계정 · 개인정보
+## 마이페이지 · 개인정보
 
-- 오른쪽 위 **내 이름**을 누르면 **계정** 화면(`#/account`)이 열립니다: 로그인 계정, 공개 이름(가입 일시 번호), 로그아웃, **회원 탈퇴**
-- **회원 탈퇴**: 내 메모(공개·비공개 전부), 하루 사용량, 예전 위치 메모, 로그인 계정을 모두 즉시 삭제합니다 (`deleteAccount`, `deleteAllMyData`)
+- 오른쪽 위 **사람 모양 아이콘**을 누르면 **마이페이지**(`#/account`)가 열립니다
+  - **내 정보**: 로그인 계정(이메일), 로그인 방법
+  - **이름**: 공개 메모에 작성자로 표시됩니다. 기본값은 가입 일시 12자리 숫자이고, 1~20자로 바꿀 수 있습니다.
+    바꾸면 이미 쓴 내 메모의 작성자 이름도 함께 바뀝니다. **기본값으로** 버튼으로 되돌릴 수 있습니다
+  - **이용 기록**: 가입일, 마지막 접속(이번 접속 바로 전), 접속 횟수(앱을 열 때마다 1, 새로고침은 세지 않음)
+  - **로그아웃**, **계정 삭제**
+- **계정 삭제**: 내 메모(공개·비공개 전부), 프로필, 하루 사용량, 예전 위치 메모, 로그인 계정을 모두 즉시 삭제합니다 (`deleteAccount`, `deleteAllMyData`)
   - Firebase가 최근 로그인을 요구하면 Google 로그인 창을 한 번 더 띄운 뒤 삭제합니다
 - **개인정보처리방침**: https://recordish.github.io/privacy.html (`public/privacy.html`, 로그인 없이 볼 수 있는 정적 페이지)
   - 계정·데이터 삭제 안내: https://recordish.github.io/privacy.html#delete
@@ -103,6 +108,7 @@ recordish.github.io/
     │   └── config.js           # Firebase 초기화 (auth, db 내보냄)
     ├── services/               # 데이터/인증 접근 계층
     │   ├── memoService.js      #   메모 CRUD, 공개 메모 페이지, 하루 글자 사용량
+    │   ├── profileService.js   #   이름, 접속 횟수·시각 (profiles/{uid})
     │   └── authService.js      #   로그인/로그아웃 (Firebase Auth)
     ├── contexts/
     │   └── AuthContext.jsx     # 로그인 사용자 전역 상태
@@ -114,7 +120,7 @@ recordish.github.io/
     │   ├── relativeTime.js     # "방금 전 / 3분 전 / 2일 전" 변환
     │   └── text.js             # 글자 수 세기, 하루 글자 한도(10,000)
     ├── components/             # 재사용 UI 컴포넌트
-    │   ├── Header.jsx          #   로고(→ 전체), 비공개/공개 탭
+    │   ├── Header.jsx          #   로고(→ 전체), 비공개/공개 탭, 사람 아이콘(→ 마이페이지)
     │   ├── MemoEditor.jsx      #   메모 입력창 + 글자 수 + 공개/비공개 선택
     │   ├── MemoContent.jsx     #   메모 본문 (3줄 말줄임 + 더보기/접기)
     │   ├── MemoItem.jsx
@@ -125,7 +131,7 @@ recordish.github.io/
     │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 로그인 화면으로)
     └── pages/                  # 라우트 단위 화면
         ├── FeedPage.jsx        #   전체(#/) · 비공개(#/mine) · 공개(#/public)
-        ├── AccountPage.jsx     #   계정 · 회원 탈퇴 (#/account)
+        ├── AccountPage.jsx     #   마이페이지: 내 정보, 이름, 이용 기록, 로그아웃, 계정 삭제 (#/account)
         ├── LoginPage.jsx       #   로그인 (#/login)
         └── NotFoundPage.jsx
 ```
@@ -138,6 +144,7 @@ recordish.github.io/
 | --- | --- |
 | `memos/{memoId}` | `{ uid, authorName, content, isPublic, createdAt, updatedAt }` |
 | `usage/{uid}` | `{ day: 20261102, chars: 1234 }` — 오늘(한국 시간) 쓴 글자 수 |
+| `profiles/{uid}` | `{ name, visitCount, lastVisitAt, prevVisitAt }` — 이름(null이면 기본값), 접속 횟수, 이번·이전 접속 시각 |
 
 - **내 비공개 메모**: `uid == 내 uid` && `isPublic == false`로 전부 불러와 브라우저에서 최신순으로 정렬합니다
 - **공개 메모**: `isPublic == true`, `updatedAt` 내림차순, 21개씩 읽어서 20개를 보여주고 다음 페이지가 있는지 판단합니다
@@ -154,6 +161,7 @@ recordish.github.io/
   - 본인만 읽고 쓰고 지울 수 있고(지우기는 회원 탈퇴용), 오늘 날짜로만 기록할 수 있습니다
   - 10,000자를 넘을 수 없고, 같은 날 안에서는 줄일 수 없습니다
   - 메모를 쓰거나 늘릴 때는 같은 batch에서 사용량이 정확히 그만큼 늘어나야 합니다
+- 프로필(`profiles/{uid}`)은 본인만 읽고 쓰고 지울 수 있습니다. 정해진 필드만 허용하고, 이름은 null 또는 1~20자 문자열, 메모의 작성자 이름도 20자 이하만 허용합니다
 - 예전 저장 위치(`users/{uid}/memos`)는 본인 읽기/삭제만 허용합니다
 
 ## Firebase 설정

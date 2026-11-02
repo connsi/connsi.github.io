@@ -24,6 +24,22 @@ service cloud.firestore {
             || request.resource.data.chars >= resource.data.chars);
     }
 
+    // ---------- 프로필: profiles/{uid} = { name, visitCount, lastVisitAt, prevVisitAt } ----------
+    // 본인만 읽고 쓰고 지울 수 있습니다. 이름은 비우거나(null = 기본값) 1~20자 문자열입니다.
+    match /profiles/{uid} {
+      function validProfile(d) {
+        return d.keys().hasOnly(['name', 'visitCount', 'lastVisitAt', 'prevVisitAt'])
+          && (d.get('name', null) == null
+              || (d.name is string && d.name.size() >= 1 && d.name.size() <= 20))
+          && d.get('visitCount', 0) is int
+          && (d.get('lastVisitAt', null) == null || d.lastVisitAt is number)
+          && (d.get('prevVisitAt', null) == null || d.prevVisitAt is number);
+      }
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && validProfile(request.resource.data);
+    }
+
     // ---------- 메모 ----------
     // 공개 메모는 누구나 읽을 수 있고, 비공개 메모는 작성자만 읽을 수 있습니다.
     // 쓰기(작성/수정/삭제)는 작성자 본인만 가능합니다.
@@ -35,6 +51,7 @@ service cloud.firestore {
         return data.content is string
           && data.isPublic is bool
           && data.authorName is string
+          && data.authorName.size() <= 20
           && data.updatedAt is number;
       }
       function usagePath() {
