@@ -31,6 +31,10 @@ a { color: var(--primary); text-decoration: none; }
 }
 .header nav { display: flex; gap: 8px; align-items: center; }
 .logo { font-weight: 700; color: var(--text); }
+.header .left { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.tab { font-size: 14px; color: var(--muted); padding: 2px 0; border-bottom: 2px solid transparent; }
+.tab.active { color: var(--text); border-bottom-color: var(--primary); }
+.page-title { font-size: 18px; margin: 0 0 12px; }
 .badge { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .user { font-size: 14px; color: var(--muted); }
 
@@ -41,6 +45,7 @@ button {
   border: 1px solid var(--border); background: var(--card); color: var(--text);
 }
 button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+button:disabled { opacity: 0.6; cursor: default; }
 button.danger { color: var(--danger); }
 
 .editor { display: flex; flex-direction: column; gap: 8px; background: var(--card); padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
@@ -49,6 +54,15 @@ button.danger { color: var(--danger); }
   background: transparent; color: var(--text); resize: vertical;
 }
 .actions { display: flex; gap: 8px; justify-content: flex-end; }
+.editor-footer { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.visibility { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.visibility button { border: none; border-radius: 0; font-size: 14px; color: var(--muted); }
+.visibility button + button { border-left: 1px solid var(--border); }
+.visibility button.on { background: var(--primary); color: #fff; }
+.memo .info { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.author { font-weight: 600; color: var(--text); }
+.tag { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.tag.public { color: var(--primary); border-color: var(--primary); }
 
 .memo-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 12px; }
 .memo { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }

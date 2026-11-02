@@ -1,4 +1,4 @@
-# 메모 앱 (React + Vite)
+# Recordish — 메모 앱 (React + Vite)
 
 React + Vite로 만든 메모 웹 앱입니다. Firebase를 설정하면 Google 로그인 후 Firestore에 저장하고,
 설정하지 않으면 브라우저 `localStorage`에 저장하는 로컬 모드로 동작합니다.
@@ -62,10 +62,12 @@ recordish.github.io/
     │   ├── MemoEditor.jsx
     │   ├── MemoItem.jsx
     │   ├── MemoList.jsx
-    │   └── ProtectedRoute.jsx
+    │   ├── ProtectedRoute.jsx
+    │   └── VisibilityToggle.jsx  # 비공개/공개 선택
     └── pages/              # 라우트 단위 화면
         ├── HomePage.jsx
         ├── LoginPage.jsx
+        ├── PublicPage.jsx      # 모두의 공개 메모
         └── NotFoundPage.jsx
 ```
 
@@ -77,8 +79,13 @@ recordish.github.io/
 코드는 이미 Firebase(Google 로그인 + Firestore)를 지원합니다. 설정값만 넣으면 바로 동작합니다.
 설정값이 없으면 지금처럼 로컬 모드(브라우저에 저장)로 동작합니다.
 
-- 로그인한 사용자의 메모는 Firestore `users/{uid}/memos/{memoId}` 에 저장됩니다.
-- 보안 규칙(`firestore.rules`): 본인 메모만 읽고 쓸 수 있습니다.
+- 메모는 Firestore `memos/{memoId}` 에 저장됩니다: `{ uid, authorName, content, isPublic, createdAt, updatedAt }`
+- 메모를 쓸 때 **🔒 비공개(기본) / 🌐 공개**를 고를 수 있습니다.
+  - 비공개 메모: 작성자만 볼 수 있습니다 (**내 메모** 화면).
+  - 공개 메모: 로그인하지 않은 사람도 **공개 메모** 화면(`#/public`)에서 작성자 이름과 함께 볼 수 있습니다.
+  - 작성, 수정, 삭제는 작성자만 할 수 있습니다.
+- 보안 규칙(`firestore.rules`)이 위 권한을 서버에서 강제합니다. **규칙을 바꾸면 Firebase 콘솔 → Firestore → 규칙에 다시 게시해야 합니다.**
+- 예전 위치(`users/{uid}/memos`)에 있던 메모는 로그인할 때 자동으로 `memos`로 옮겨집니다 (비공개로).
 
 ### 1. Firebase 프로젝트 만들기
 1. [Firebase 콘솔](https://console.firebase.google.com)에서 **프로젝트 만들기**

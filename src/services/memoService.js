@@ -1,21 +1,26 @@
 // 메모 데이터 접근 계층
-// - Firebase가 설정되어 있고 로그인한 경우: Firestore (users/{uid}/memos/{memoId})
+// - Firebase가 설정된 경우: Firestore 최상위 컬렉션 memos/{memoId}
+//     { uid, authorName, content, isPublic, createdAt, updatedAt }
+//   · 내 메모: uid == 내 uid
+//   · 공개 메모: isPublic == true (누구나 읽기 가능)
 // - 그 외(로컬 모드): 브라우저 localStorage
-// 컴포넌트/훅은 어느 저장소를 쓰는지 몰라도 됩니다.
+// 쿼리는 조건 하나만 쓰고 정렬은 브라우저에서 해서, Firestore 복합 색인이 필요 없습니다.
 import {
   collection,
   deleteDoc,
   doc,
   getDocs,
-  orderBy,
   query,
   setDoc,
   updateDoc,
+  where,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 
-const isCloud = (uid) => Boolean(db && uid)
-const memosCol = (uid) => collection(db, 'users', uid, 'memos')
+const isCloud = (user) => Boolean(db && user)
+const memosCol = () => collection(db, 'memos')
+const byNewest = (a, b) => b.updatedAt - a.updatedAt
+const authorNameOf = (user) => user?.displayName || '익명'
 
 // ---------- localStorage ----------
 const STORAGE_KEY = 'memo-app:memos'
@@ -29,49 +34,86 @@ function readAll() {
   }
 }
 
-// 예전에 제목을 따로 저장한 메모는 제목을 내용 첫 줄로 합칩니다.
+// 예전 형식의 메모를 현재 형식으로 맞춥니다.
+// (제목이 있으면 내용 첫 줄로 합치고, 공개 여부가 없으면 비공개)
 function fromLegacy({ title, ...memo }) {
-  if (!title) return memo
-  return { ...memo, content: memo.content ? `${title}\n${memo.content}` : title }
+  const content = title ? (memo.content ? `${title}\n${memo.content}` : title) : memo.content
+  return { ...memo, content, isPublic: memo.isPublic === true }
 }
 
 function writeAll(memos) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(memos))
 }
 
+// ---------- 예전 Firestore 위치(users/{uid}/memos)에서 옮기기 ----------
+const migrated = new Set()
+
+async function migrateLegacy(user) {
+  if (migrated.has(user.uid)) return
+  const old = await getDocs(collection(db, 'users', user.uid, 'memos'))
+  for (const d of old.docs) {
+    const data = d.data()
+    await setDoc(doc(memosCol(), d.id), {
+      uid: user.uid,
+      authorName: authorNameOf(user),
+      content: data.content ?? '',
+      isPublic: false,
+      createdAt: data.createdAt ?? Date.now(),
+      updatedAt: data.updatedAt ?? Date.now(),
+    })
+    await deleteDoc(d.ref)
+  }
+  migrated.add(user.uid)
+}
+
 // ---------- 공개 함수 ----------
-export async function getMemos(uid) {
-  if (isCloud(uid)) {
-    const snap = await getDocs(query(memosCol(uid), orderBy('updatedAt', 'desc')))
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+export async function getMyMemos(user) {
+  if (isCloud(user)) {
+    // 옮기기에 실패해도 메모 목록은 계속 보여줍니다 (다음 접속 때 다시 시도).
+    await migrateLegacy(user).catch((e) => console.warn('예전 메모 옮기기 실패:', e))
+    const snap = await getDocs(query(memosCol(), where('uid', '==', user.uid)))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byNewest)
   }
-  return readAll().sort((a, b) => b.updatedAt - a.updatedAt)
+  return readAll().sort(byNewest)
 }
 
-export async function createMemo(uid, { content }) {
+export async function getPublicMemos() {
+  if (db) {
+    const snap = await getDocs(query(memosCol(), where('isPublic', '==', true)))
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byNewest)
+  }
+  return readAll().filter((m) => m.isPublic).sort(byNewest)
+}
+
+export async function createMemo(user, { content, isPublic = false }) {
   const now = Date.now()
-  const memo = { id: crypto.randomUUID(), content, createdAt: now, updatedAt: now }
-  if (isCloud(uid)) {
-    const { id, ...data } = memo
-    await setDoc(doc(memosCol(uid), id), data)
+  const id = crypto.randomUUID()
+  if (isCloud(user)) {
+    await setDoc(doc(memosCol(), id), {
+      uid: user.uid,
+      authorName: authorNameOf(user),
+      content,
+      isPublic,
+      createdAt: now,
+      updatedAt: now,
+    })
   } else {
-    writeAll([memo, ...readAll()])
+    writeAll([{ id, content, isPublic, createdAt: now, updatedAt: now }, ...readAll()])
   }
-  return memo
 }
 
-export async function updateMemo(uid, id, { content }) {
+export async function updateMemo(user, id, { content, isPublic }) {
   const updatedAt = Date.now()
-  if (isCloud(uid)) {
-    await updateDoc(doc(memosCol(uid), id), { content, updatedAt })
+  if (isCloud(user)) {
+    await updateDoc(doc(memosCol(), id), { content, isPublic, authorName: authorNameOf(user), updatedAt })
     return
   }
-  writeAll(readAll().map((m) => (m.id === id ? { ...m, content, updatedAt } : m)))
+  writeAll(readAll().map((m) => (m.id === id ? { ...m, content, isPublic, updatedAt } : m)))
 }
 
-export async function deleteMemo(uid, id) {
-  if (isCloud(uid)) {
-    await deleteDoc(doc(memosCol(uid), id))
+export async function deleteMemo(user, id) {
+  if (isCloud(user)) {
+    await deleteDoc(doc(memosCol(), id))
     return
   }
   writeAll(readAll().filter((m) => m.id !== id))
