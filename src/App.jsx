@@ -15,7 +15,7 @@ export default function App() {
         <Header />
         <main className="container">
           <Routes>
-            {/* 전체: 모두의 공개 + 내 비공개 / 비공개: 내 비공개만 (로그인 필요) / 공개: 모두의 공개만 */}
+            {/* 전체(로고): 모두의 공개 + 내 비공개 / 나만 보기: 내 비공개만 (로그인 필요) / 둘러보기: 모두의 공개만 */}
             <Route path="/" element={<FeedPage key="all" mode="all" />} />
             <Route path="/mine" element={<ProtectedRoute><FeedPage key="mine" mode="mine" /></ProtectedRoute>} />
             <Route path="/public" element={<FeedPage key="public" mode="public" />} />
