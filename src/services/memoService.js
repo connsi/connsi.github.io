@@ -16,11 +16,13 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
+import { signupId } from '../utils/authorId'
 
 const isCloud = (user) => Boolean(db && user)
 const memosCol = () => collection(db, 'memos')
 const byNewest = (a, b) => b.updatedAt - a.updatedAt
-const authorNameOf = (user) => user?.displayName || '익명'
+// 공개 메모에는 Google 이름 대신 가입 일시 번호를 보여줍니다.
+const authorNameOf = (user) => signupId(user)
 
 // ---------- localStorage ----------
 const STORAGE_KEY = 'memo-app:memos'
@@ -66,13 +68,29 @@ async function migrateLegacy(user) {
   migrated.add(user.uid)
 }
 
+// 예전에 Google 이름으로 저장된 작성자 이름을 지금 규칙(가입 일시 번호)으로 바꿉니다.
+// 수정 시각(updatedAt)은 그대로 둡니다. 실패해도 목록은 계속 보여줍니다.
+async function syncAuthorName(user, memos) {
+  const name = authorNameOf(user)
+  const stale = memos.filter((m) => m.authorName !== name)
+  await Promise.all(
+    stale.map((m) =>
+      updateDoc(doc(memosCol(), m.id), { authorName: name })
+        .then(() => (m.authorName = name))
+        .catch((e) => console.warn('작성자 이름 갱신 실패:', e)),
+    ),
+  )
+}
+
 // ---------- 공개 함수 ----------
 export async function getMyMemos(user) {
   if (isCloud(user)) {
     // 옮기기에 실패해도 메모 목록은 계속 보여줍니다 (다음 접속 때 다시 시도).
     await migrateLegacy(user).catch((e) => console.warn('예전 메모 옮기기 실패:', e))
     const snap = await getDocs(query(memosCol(), where('uid', '==', user.uid)))
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() })).sort(byNewest)
+    const memos = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    await syncAuthorName(user, memos)
+    return memos.sort(byNewest)
   }
   return readAll().sort(byNewest)
 }
