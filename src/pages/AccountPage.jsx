@@ -2,48 +2,144 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { deleteAccount, logout } from '../services/authService'
-import { signupId } from '../utils/authorId'
+import { defaultName, NAME_MAX, updateName, validateName } from '../services/profileService'
+import { fullDateTime } from '../utils/relativeTime'
 
-// 계정 화면: 공개 이름(가입 일시 번호), 로그아웃, 회원 탈퇴
+const formatDate = (value) => (value ? fullDateTime(new Date(value).getTime()) : '-')
+
+// 마이페이지: 내 정보, 이름(공개 메모 작성자) 확인·수정, 가입일·마지막 접속·접속 횟수, 로그아웃, 계정 삭제
 export default function AccountPage() {
-  const { user } = useAuth()
+  const { user, profile, setProfile } = useAuth()
   const navigate = useNavigate()
-  const [busy, setBusy] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [nameError, setNameError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
-  if (!user) return <p className="empty">로컬 모드에서는 계정 기능이 없습니다.</p>
+  if (!user) return <p className="empty">로컬 모드에서는 마이페이지가 없습니다.</p>
+
+  const fallback = defaultName(user)
+  const currentName = profile?.name || fallback
+
+  const startEdit = () => {
+    setDraft(currentName)
+    setNameError('')
+    setEditing(true)
+  }
+
+  const saveName = async (name) => {
+    setSaving(true)
+    try {
+      setProfile(await updateName(user, name))
+      setEditing(false)
+    } catch (e) {
+      setNameError(`저장하지 못했습니다: ${e.message}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSave = (e) => {
+    e.preventDefault()
+    const { name, error } = validateName(draft)
+    if (error) return setNameError(error)
+    // 기본값(가입 일시 숫자)과 같으면 따로 저장하지 않고 기본값으로 둡니다
+    saveName(name === fallback ? null : name)
+  }
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('/', { replace: true })
+  }
 
   const handleDelete = async () => {
-    const ok = confirm(
-      '정말 탈퇴할까요?\n\n공개·비공개 메모를 포함한 모든 데이터가 바로 삭제되며 되돌릴 수 없습니다.',
-    )
+    const ok = confirm('정말 계정을 삭제할까요?\n\n공개·비공개 메모를 포함한 모든 데이터가 바로 삭제되며 되돌릴 수 없습니다.')
     if (!ok) return
-    setBusy(true)
+    setDeleting(true)
     try {
       await deleteAccount()
-      alert('탈퇴가 완료되었습니다. 그동안 이용해 주셔서 감사합니다.')
+      alert('계정이 삭제되었습니다. 그동안 이용해 주셔서 감사합니다.')
       navigate('/', { replace: true })
     } catch (e) {
-      alert(`탈퇴하지 못했습니다.\n${e.message}`)
-      setBusy(false)
+      alert(`계정을 삭제하지 못했습니다.\n${e.message}`)
+      setDeleting(false)
     }
   }
 
   return (
-    <div className="account">
-      <h2 className="page-title">계정</h2>
-      <dl className="account-info">
-        <dt>로그인 계정</dt>
-        <dd>{user.email}</dd>
-        <dt>공개 메모에 표시되는 이름</dt>
-        <dd>{signupId(user)}</dd>
-      </dl>
-      <button type="button" onClick={logout}>로그아웃</button>
+    <div className="mypage">
+      <h2 className="page-title">마이페이지</h2>
+
+      <section className="card">
+        <h3>내 정보</h3>
+        <dl className="info-list">
+          <dt>로그인 계정</dt>
+          <dd>{user.email}</dd>
+          <dt>로그인 방법</dt>
+          <dd>Google</dd>
+        </dl>
+      </section>
+
+      <section className="card">
+        <h3>이름</h3>
+        <p className="hint">공개 메모에 작성자로 표시됩니다. 기본값은 가입 일시 12자리 숫자예요.</p>
+        {editing ? (
+          <form className="name-form" onSubmit={handleSave}>
+            <input
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value)
+                setNameError('')
+              }}
+              maxLength={NAME_MAX + 10}
+              aria-label="새 이름"
+              aria-invalid={Boolean(nameError)}
+              aria-describedby="name-help"
+              autoFocus
+            />
+            <div className="actions">
+              <button type="button" onClick={() => setEditing(false)} disabled={saving}>취소</button>
+              <button type="submit" className="primary" disabled={saving}>{saving ? '저장 중…' : '저장'}</button>
+            </div>
+            <p id="name-help" className={nameError ? 'error' : 'hint'}>
+              {nameError || `${draft.trim().length} / ${NAME_MAX}자`}
+            </p>
+          </form>
+        ) : (
+          <div className="name-row">
+            <strong className="name-value">{currentName}</strong>
+            {!profile?.name && <span className="hint">(기본값)</span>}
+            <span className="name-actions">
+              <button type="button" onClick={startEdit} disabled={!profile}>수정</button>
+              {profile?.name && (
+                <button type="button" onClick={() => saveName(null)} disabled={saving}>기본값으로</button>
+              )}
+            </span>
+          </div>
+        )}
+        {!profile && <p className="hint">프로필을 불러오는 중이에요…</p>}
+      </section>
+
+      <section className="card">
+        <h3>이용 기록</h3>
+        <dl className="info-list">
+          <dt>가입일</dt>
+          <dd>{formatDate(user.metadata.creationTime)}</dd>
+          <dt>마지막 접속</dt>
+          <dd>{profile ? (profile.prevVisitAt ? formatDate(profile.prevVisitAt) : '이번이 첫 접속이에요') : '-'}</dd>
+          <dt>접속 횟수</dt>
+          <dd>{profile ? `${(profile.visitCount ?? 0).toLocaleString()}회` : '-'}</dd>
+        </dl>
+      </section>
+
+      <button type="button" onClick={handleLogout}>로그아웃</button>
 
       <section className="danger-zone">
-        <h3>회원 탈퇴</h3>
-        <p>탈퇴하면 공개·비공개 메모를 포함한 모든 데이터가 바로 삭제되며 되돌릴 수 없습니다.</p>
-        <button type="button" className="danger" onClick={handleDelete} disabled={busy}>
-          {busy ? '탈퇴 처리 중…' : '회원 탈퇴'}
+        <h3>계정 삭제</h3>
+        <p>계정을 삭제하면 공개·비공개 메모를 포함한 모든 데이터가 바로 삭제되며 되돌릴 수 없습니다.</p>
+        <button type="button" className="danger" onClick={handleDelete} disabled={deleting}>
+          {deleting ? '삭제 중…' : '계정 삭제'}
         </button>
       </section>
 

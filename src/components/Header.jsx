@@ -1,7 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { isFirebaseConfigured } from '../firebase/config'
-import { logout } from '../services/authService'
 
 export default function Header() {
   const { user } = useAuth()
@@ -20,10 +19,12 @@ export default function Header() {
         {!isFirebaseConfigured && <span className="badge">로컬 모드</span>}
         {isFirebaseConfigured &&
           (user ? (
-            <>
-              <NavLink to="/account" className="user" title="계정">{user.displayName ?? user.email}</NavLink>
-              <button onClick={logout}>로그아웃</button>
-            </>
+            <NavLink to="/account" className="profile-button" aria-label="마이페이지" title="마이페이지">
+              <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" strokeWidth="2" />
+                <path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </NavLink>
           ) : (
             <Link to="/login">로그인</Link>
           ))}

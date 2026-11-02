@@ -26,7 +26,7 @@ import {
   writeBatch,
 } from 'firebase/firestore/lite'
 import { db } from '../firebase/config'
-import { signupId } from '../utils/authorId'
+import { getAuthorName, profileRef } from './profileService'
 import { charCount, DAILY_CHAR_LIMIT } from '../utils/text'
 
 export const PAGE_SIZE = 20
@@ -35,8 +35,8 @@ const isCloud = (user) => Boolean(db && user)
 const memosCol = () => collection(db, 'memos')
 const usageRef = (uid) => doc(db, 'usage', uid)
 const byNewest = (a, b) => b.updatedAt - a.updatedAt
-// 공개 메모에는 Google 이름 대신 가입 일시 번호를 보여줍니다.
-const authorNameOf = (user) => signupId(user)
+// 공개 메모의 작성자 이름: 마이페이지에서 정한 이름, 없으면 가입 일시 12자리 숫자
+const authorNameOf = (user) => getAuthorName(user)
 
 // 오늘 날짜(한국 시간)를 20261102 같은 숫자로. 보안 규칙의 today() 와 같은 계산입니다.
 export function todayKey(now = Date.now()) {
@@ -92,10 +92,10 @@ async function chargeChars(user, added) {
   return { day: todayKey(), chars: next }
 }
 
-// 예전에 Google 이름으로 저장된 작성자 이름을 지금 규칙(가입 일시 번호)으로 바꿉니다.
+// 작성자 이름이 지금 내 이름(마이페이지 이름 또는 가입 일시 번호)과 다른 메모를 맞춥니다.
 // 수정 시각(updatedAt)은 그대로 둡니다. 실패해도 목록은 계속 보여줍니다.
 async function syncAuthorName(user, memos) {
-  const name = authorNameOf(user)
+  const name = await authorNameOf(user)
   const stale = memos.filter((m) => m.authorName !== name)
   await Promise.all(
     stale.map((m) =>
@@ -150,7 +150,7 @@ export async function createMemo(user, { content, isPublic = false }) {
     const batch = writeBatch(db)
     batch.set(doc(memosCol(), id), {
       uid: user.uid,
-      authorName: authorNameOf(user),
+      authorName: await authorNameOf(user),
       content,
       isPublic,
       createdAt: now,
@@ -171,7 +171,7 @@ export async function updateMemo(user, id, { content, isPublic }) {
     const added = charCount(content) - charCount(before.data()?.content)
     const usage = await chargeChars(user, added)
     const batch = writeBatch(db)
-    batch.update(ref, { content, isPublic, authorName: authorNameOf(user), updatedAt })
+    batch.update(ref, { content, isPublic, authorName: await authorNameOf(user), updatedAt })
     if (usage) batch.set(usageRef(user.uid), usage)
     await batch.commit()
     return
@@ -195,6 +195,7 @@ export async function deleteAllMyData(user) {
     ...(await getDocs(query(memosCol(), where('uid', '==', user.uid)))).docs.map((d) => d.ref),
     ...(await getDocs(collection(db, 'users', user.uid, 'memos'))).docs.map((d) => d.ref),
     usageRef(user.uid),
+    profileRef(user.uid),
   ]
   for (let i = 0; i < refs.length; i += 400) {
     const batch = writeBatch(db)

@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth'
 import { auth } from '../firebase/config'
 import { deleteAllMyData } from './memoService'
+import { clearProfileCache } from './profileService'
 
 export function subscribeAuth(callback) {
   if (!auth) {
@@ -26,6 +27,7 @@ export async function loginWithGoogle() {
 }
 
 export async function logout() {
+  clearProfileCache()
   if (auth) await signOut(auth)
 }
 
@@ -42,4 +44,5 @@ export async function deleteAccount() {
     await reauthenticateWithPopup(user, new GoogleAuthProvider())
     await deleteUser(user)
   }
+  clearProfileCache()
 }
