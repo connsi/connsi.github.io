@@ -15,10 +15,10 @@ export default function App() {
         <Header />
         <main className="container">
           <Routes>
-            {/* 전체(로고): 모두의 공개 + 내 비공개 / 나만보기: 내 비공개만 (로그인 필요) / 둘러보기: 모두의 공개만 */}
+            {/* 로고: 나와 다른 사람의 공개 메모 / 나만보기: 내 비공개 (로그인 필요) / 공개메모: 내 공개 (로그인 필요) */}
             <Route path="/" element={<FeedPage key="all" mode="all" />} />
             <Route path="/mine" element={<ProtectedRoute><FeedPage key="mine" mode="mine" /></ProtectedRoute>} />
-            <Route path="/public" element={<FeedPage key="public" mode="public" />} />
+            <Route path="/public" element={<ProtectedRoute><FeedPage key="public" mode="public" /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<NotFoundPage />} />

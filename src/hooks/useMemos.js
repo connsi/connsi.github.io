@@ -3,17 +3,12 @@ import { useAuth } from '../contexts/AuthContext'
 import * as memoService from '../services/memoService'
 
 // 화면별 메모 목록
-// mode: 'all'    → 모두의 공개 메모 + 내 비공개 메모 (/)
-//       'mine'   → 내 비공개 메모 (/mine)
-//       'public' → 모두의 공개 메모 (/public)
-//
-// 공개 메모는 20개씩 "더 보기"로 불러오고, 내 비공개 메모는 한 번에 불러옵니다.
-// 전체 화면에서는 아직 불러오지 않은 공개 메모보다 오래된 비공개 메모를 숨겨 두었다가
-// 더 보기를 누를 때 함께 보여줘서, 두 목록이 항상 최신순으로 자연스럽게 섞이게 합니다.
+// mode: 'all'    → 나와 다른 사람의 공개 메모 (로고, /)    — 20개씩 "더 보기"
+//       'mine'   → 내가 쓴 비공개 메모 (나만보기, /mine)  — 한 번에
+//       'public' → 내가 쓴 공개 메모 (공개메모, /public)  — 한 번에
 export function useFeed(mode) {
   const { user } = useAuth()
-  const withPublic = mode !== 'mine'
-  const withPrivate = mode !== 'public'
+  const isFeed = mode === 'all'
 
   const [publicMemos, setPublicMemos] = useState([])
   const [privateMemos, setPrivateMemos] = useState([])
@@ -26,10 +21,10 @@ export function useFeed(mode) {
   const fetchFirst = useCallback(
     () =>
       Promise.all([
-        withPublic ? memoService.getPublicMemos() : { memos: [], next: null },
-        withPrivate ? memoService.getMyPrivateMemos(user) : [],
+        isFeed ? memoService.getPublicMemos() : { memos: [], next: null },
+        isFeed ? [] : memoService.getMyMemos(user, mode === 'public'),
       ]),
-    [user, withPublic, withPrivate],
+    [user, isFeed, mode],
   )
   const apply = ([page, mine]) => {
     setPublicMemos(page.memos)
@@ -69,11 +64,9 @@ export function useFeed(mode) {
   }, [next, loadingMore])
 
   const memos = useMemo(() => {
-    // 공개 메모가 더 남아 있으면, 마지막으로 불러온 공개 메모보다 새 비공개 메모만 보여줍니다.
-    const cutoff = next && publicMemos.length ? publicMemos[publicMemos.length - 1].updatedAt : -Infinity
-    const visiblePrivate = privateMemos.filter((m) => m.updatedAt >= cutoff)
-    return [...publicMemos, ...visiblePrivate].sort((a, b) => b.updatedAt - a.updatedAt)
-  }, [publicMemos, privateMemos, next])
+    // 로고 화면은 공개 메모 목록, 나머지는 내 메모 목록 (둘 중 하나만 채워집니다)
+    return [...publicMemos, ...privateMemos].sort((a, b) => b.updatedAt - a.updatedAt)
+  }, [publicMemos, privateMemos])
 
   // 저장 공간 초과, 하루 글자 한도, 네트워크 오류 등으로 실패하면 알리고 false 를 돌려줍니다.
   const run = async (action) => {
