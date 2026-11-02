@@ -22,7 +22,7 @@ npm run dev      # 개발 서버 실행 → http://localhost:5173
 ## 배포 (GitHub Pages)
 
 `main` 브랜치에 푸시하면 GitHub Actions(`.github/workflows/deploy.yml`)가 앱을 빌드해서
-**https://connsi.github.io/** 에 배포합니다.
+**https://recordish.github.io/** 에 배포합니다.
 
 처음 한 번만 설정이 필요합니다:
 - 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 변경
@@ -36,7 +36,7 @@ Firebase를 붙인 뒤에는 배포된 앱에서도 Firebase를 쓰도록
 ## 폴더 구조
 
 ```
-connsi.github.io/
+recordish.github.io/
 ├── .github/workflows/
 │   └── deploy.yml          # GitHub Pages 자동 배포
 ├── index.html
@@ -85,7 +85,7 @@ connsi.github.io/
 1. [Firebase 콘솔](https://console.firebase.google.com)에서 **프로젝트 만들기**
 2. 프로젝트 개요의 **웹(`</>`) 아이콘**으로 웹 앱 추가 → 화면에 나오는 `firebaseConfig` 값을 복사해 둡니다.
 3. **Authentication → 시작하기 → 로그인 방법 → Google** 사용 설정
-4. **Authentication → 설정 → 승인된 도메인**에 `connsi.github.io` 추가
+4. **Authentication → 설정 → 승인된 도메인**에 `recordish.github.io` 추가
 5. **Firestore Database → 데이터베이스 만들기** (프로덕션 모드)
 6. **Firestore Database → 규칙** 탭에 `firestore.rules` 내용을 붙여넣고 **게시**
 
