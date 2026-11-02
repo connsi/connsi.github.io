@@ -1,7 +1,26 @@
 # Recordish — 메모 앱 (React + Vite)
 
-React + Vite로 만든 메모 웹 앱입니다. Firebase를 설정하면 Google 로그인 후 Firestore에 저장하고,
-설정하지 않으면 브라우저 `localStorage`에 저장하는 로컬 모드로 동작합니다.
+**사이트: https://recordish.github.io/**
+
+React + Vite로 만든 메모 웹 앱입니다. Google 계정으로 로그인하면 메모가 Firebase(Firestore)에 저장되어
+어느 기기에서나 같은 메모를 볼 수 있습니다.
+
+## 주요 기능
+
+- **Google 로그인**: Google 공식 스타일 버튼(G 로고)으로 로그인
+- **내 메모**: 메모 작성, 수정, 삭제. 로그인한 본인만 볼 수 있습니다
+- **🔒 비공개 / 🌐 공개 선택**: 기본은 비공개이고, 공개로 고른 메모는 **공개 메모** 화면에 올라갑니다
+- **공개 메모 화면**(`#/public`)
+  - 로그인하지 않아도 모든 사람의 공개 메모를 볼 수 있습니다. **로그인하지 않고 접속하면 이 화면이 첫 화면**입니다
+  - 최신순으로 **20개씩**, 아래 **더 보기** 버튼으로 이어서 불러옵니다
+  - 작성자는 Google 이름 대신 **가입 일시 번호**(한국 시간 `YYMMDDHHmmss`, 예: `261102144212`)로 표시됩니다
+- **시간 표시**: "방금 전", "3분 전", "5시간 전", "2일 전". 7일이 지나면 "11월 2일"처럼 날짜로 표시하고,
+  마우스를 올리면 전체 날짜와 시각이 보입니다
+- **하루 글자 제한**: 한 사람이 하루(한국 시간 자정 기준)에 쓸 수 있는 글자는 **모두 합쳐 10,000자**입니다
+  - 새 메모는 글자 수 전체, 수정은 **늘어난 글자 수만큼** 오늘 사용량에 더합니다. 삭제해도 사용량은 돌아오지 않습니다
+  - 한도를 넘으면 "오늘 남은 글자"를 알려 주는 안내창이 뜨고 저장되지 않습니다 (쓰던 내용은 남아 있음)
+  - 글자 수는 보안 규칙과 같은 기준으로 셉니다. 한글·영어·숫자는 1자, 대부분의 이모지는 2자입니다
+  - 화면뿐 아니라 **보안 규칙에서도 검사**하므로 우회할 수 없습니다
 
 ## 실행 방법
 
@@ -19,101 +38,122 @@ npm run dev      # 개발 서버 실행 → http://localhost:5173
 | `npm run preview` | 빌드 결과를 로컬에서 미리보기 |
 | `npm run lint` | 코드 검사 (oxlint) |
 
+`npm run dev`는 기본적으로 **로컬 모드**(Firebase 없이 브라우저 `localStorage`에 저장, 로그인·글자 제한 없음)로 동작합니다.
+개발 중에도 Firebase를 쓰는 방법은 아래 [로컬 개발에서 Firebase 쓰기](#로컬-개발에서-firebase-쓰기)를 참고하세요.
+
 ## 배포 (GitHub Pages)
 
-`main` 브랜치에 푸시하면 GitHub Actions(`.github/workflows/deploy.yml`)가 앱을 빌드해서
-**https://recordish.github.io/** 에 배포합니다.
+`main` 브랜치에 푸시하면 GitHub Actions(`.github/workflows/deploy.yml`)가 앱을 검사(`lint`)하고 빌드해서
+**https://recordish.github.io/** 에 배포합니다. Actions 탭에서 **Deploy to GitHub Pages → Run workflow**로 직접 다시 실행할 수도 있습니다.
 
-처음 한 번만 설정이 필요합니다:
-- 저장소 **Settings → Pages → Build and deployment → Source** 를 **GitHub Actions** 로 변경
+- 처음 한 번만: 저장소 **Settings → Pages → Build and deployment → Source**를 **GitHub Actions**로 설정
+- 배포된 앱은 `.env.production`의 Firebase 설정값을 사용합니다
 
-Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 직접 다시 실행할 수도 있습니다(Run workflow).
-
-배포된 앱은 `.env.production` 의 Firebase 설정값을 사용합니다 (아래 "Firebase 연결하기" 참고).
+> ⚠️ `firestore.rules`나 `firestore.indexes.json`을 바꾸면 **Firebase 콘솔에도 반영해야** 합니다
+> (GitHub 배포만으로는 Firebase 쪽 설정이 바뀌지 않습니다). 아래 [Firebase 설정](#firebase-설정)을 참고하세요.
 
 ## 폴더 구조
 
 ```
 recordish.github.io/
 ├── .github/workflows/
-│   └── deploy.yml          # GitHub Pages 자동 배포
+│   └── deploy.yml              # GitHub Pages 자동 배포
 ├── index.html
 ├── vite.config.js
-├── .env.production         # 배포용 Firebase 설정값
-├── .env.example            # Firebase 설정값 예시
-├── firebase.json           # Firebase CLI/에뮬레이터 설정
-├── firestore.rules         # Firestore 보안 규칙
-├── public/                 # 그대로 복사되는 정적 파일 (favicon 등)
+├── .env.production             # 배포용 Firebase 설정값 (공개 값)
+├── .env.example                # Firebase 설정값 예시
+├── firebase.json               # Firebase CLI/에뮬레이터 설정
+├── firestore.rules             # Firestore 보안 규칙
+├── firestore.indexes.json      # Firestore 색인 (공개 메모 최신순 정렬)
+├── public/
+│   └── favicon.svg             # 탭 아이콘
 └── src/
-    ├── main.jsx            # 진입점
-    ├── App.jsx             # 라우팅 + AuthProvider
-    ├── index.css           # 전역 스타일
+    ├── main.jsx                # 진입점
+    ├── App.jsx                 # 라우팅 + AuthProvider
+    ├── index.css               # 전역 스타일 (색상 변수: 포인트 컬러 연한 블루)
     ├── firebase/
-    │   └── config.js       # Firebase 초기화 (auth, db 내보냄)
-    ├── services/           # 데이터/인증 접근 계층
-    │   ├── memoService.js  #   메모 CRUD (Firestore / localStorage)
-    │   └── authService.js  #   로그인/로그아웃 (Firebase Auth)
+    │   └── config.js           # Firebase 초기화 (auth, db 내보냄)
+    ├── services/               # 데이터/인증 접근 계층
+    │   ├── memoService.js      #   메모 CRUD, 공개 메모 페이지, 하루 글자 사용량
+    │   └── authService.js      #   로그인/로그아웃 (Firebase Auth)
     ├── contexts/
-    │   └── AuthContext.jsx # 로그인 사용자 전역 상태
+    │   └── AuthContext.jsx     # 로그인 사용자 전역 상태
     ├── hooks/
-    │   └── useMemos.js     # 메모 목록 상태 + CRUD 훅
+    │   ├── useMemos.js         # useMyMemos(내 메모), usePublicMemos(공개 메모 + 더 보기)
+    │   └── useNow.js           # "3분 전" 표시 갱신용 현재 시각
     ├── utils/
-    │   └── authorId.js     # 공개 작성자 번호 (가입 일시)
-    ├── components/         # 재사용 UI 컴포넌트
-    │   ├── Header.jsx
-    │   ├── MemoEditor.jsx
+    │   ├── authorId.js         # 공개 작성자 번호 (가입 일시)
+    │   ├── relativeTime.js     # "방금 전 / 3분 전 / 2일 전" 변환
+    │   └── text.js             # 글자 수 세기, 하루 글자 한도(10,000)
+    ├── components/             # 재사용 UI 컴포넌트
+    │   ├── Header.jsx          #   앱 이름(Recordish), 내 메모/공개 메모 탭
+    │   ├── MemoEditor.jsx      #   메모 입력창 + 글자 수 + 공개/비공개 선택
     │   ├── MemoItem.jsx
     │   ├── MemoList.jsx
-    │   ├── GoogleSignInButton.jsx  # Google 스타일 로그인 버튼
-    │   ├── ProtectedRoute.jsx
-    │   └── VisibilityToggle.jsx  # 비공개/공개 선택
-    └── pages/              # 라우트 단위 화면
-        ├── HomePage.jsx
-        ├── LoginPage.jsx
-        ├── PublicPage.jsx      # 모두의 공개 메모
+    │   ├── VisibilityToggle.jsx   # 🔒 비공개 / 🌐 공개 버튼
+    │   ├── GoogleSignInButton.jsx # Google 스타일 로그인 버튼
+    │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 공개 메모로)
+    └── pages/                  # 라우트 단위 화면
+        ├── HomePage.jsx        #   내 메모 (#/)
+        ├── PublicPage.jsx      #   공개 메모 (#/public)
+        ├── LoginPage.jsx       #   로그인 (#/login)
         └── NotFoundPage.jsx
 ```
 
-데이터 흐름: `pages` → `hooks` → `services` → (localStorage | Firebase).
-컴포넌트는 저장소가 무엇인지 모르기 때문에 Firestore로 바꿔도 UI 코드는 그대로입니다.
+데이터 흐름: `pages` → `hooks` → `services` → (Firestore | localStorage).
 
-## Firebase 연결하기
+## 데이터 구조 (Firestore)
 
-코드는 이미 Firebase(Google 로그인 + Firestore)를 지원합니다. 설정값만 넣으면 바로 동작합니다.
-설정값이 없으면 지금처럼 로컬 모드(브라우저에 저장)로 동작합니다.
+| 경로 | 내용 |
+| --- | --- |
+| `memos/{memoId}` | `{ uid, authorName, content, isPublic, createdAt, updatedAt }` |
+| `usage/{uid}` | `{ day: 20261102, chars: 1234 }` — 오늘(한국 시간) 쓴 글자 수 |
 
-- 메모는 Firestore `memos/{memoId}` 에 저장됩니다: `{ uid, authorName, content, isPublic, createdAt, updatedAt }`
-- 메모를 쓸 때 **🔒 비공개(기본) / 🌐 공개**를 고를 수 있습니다.
-  - 비공개 메모: 작성자만 볼 수 있습니다 (**내 메모** 화면).
-  - 공개 메모: 로그인하지 않은 사람도 **공개 메모** 화면(`#/public`)에서 볼 수 있습니다.
-    작성자는 Google 이름 대신 **가입 일시 번호**(한국 시간 `YYMMDDHHmmss`, 예: `261102144212`)로 표시됩니다 (`src/utils/authorId.js`). 로그인하지 않고 접속하면 이 화면이 첫 화면입니다.
-  - 작성, 수정, 삭제는 작성자만 할 수 있습니다.
-- 보안 규칙(`firestore.rules`)이 위 권한을 서버에서 강제합니다. **규칙을 바꾸면 Firebase 콘솔 → Firestore → 규칙에 다시 게시해야 합니다.**
-- 예전 위치(`users/{uid}/memos`)에 있던 메모는 로그인할 때 자동으로 `memos`로 옮겨집니다 (비공개로).
+- **내 메모**: `uid == 내 uid`로 불러와 브라우저에서 최신순으로 정렬합니다
+- **공개 메모**: `isPublic == true`, `updatedAt` 내림차순, 21개씩 읽어서 20개를 보여주고 다음 페이지가 있는지 판단합니다
+  → 복합 색인(`isPublic` 오름차순 + `updatedAt` 내림차순)이 필요합니다 (`firestore.indexes.json`)
+- **메모 작성·수정**: 메모와 `usage/{uid}`를 한 번에(batch) 저장합니다. 보안 규칙이 사용량이 정확히 늘었는지 확인합니다
 
-### 1. Firebase 프로젝트 만들기
-1. [Firebase 콘솔](https://console.firebase.google.com)에서 **프로젝트 만들기**
-2. 프로젝트 개요의 **웹(`</>`) 아이콘**으로 웹 앱 추가 → 화면에 나오는 `firebaseConfig` 값을 복사해 둡니다.
-3. **Authentication → 시작하기 → 로그인 방법 → Google** 사용 설정
-4. **Authentication → 설정 → 승인된 도메인**에 `recordish.github.io` 추가
-5. **Firestore Database → 데이터베이스 만들기** (프로덕션 모드)
-6. **Firestore Database → 규칙** 탭에 `firestore.rules` 내용을 붙여넣고 **게시**
+### 보안 규칙 요약 (`firestore.rules`)
 
-### 2. 설정값 넣기
-`firebaseConfig` 값은 저장소의 **`.env.production`** 에 들어 있습니다. 배포할 때(`npm run build`) 이 값을 읽습니다.
-다른 Firebase 프로젝트로 바꾸려면 이 파일의 값만 바꾸고 `main`에 머지하면 됩니다.
+- 공개 메모는 누구나 읽을 수 있고, 비공개 메모는 작성자만 읽을 수 있습니다
+- 작성, 수정, 삭제는 작성자만 할 수 있고, 작성자(`uid`)는 바꿀 수 없습니다. 필드 타입도 검사합니다
+- 하루 글자 사용량(`usage/{uid}`)
+  - 본인만 읽고 쓸 수 있고, 오늘 날짜로만 기록할 수 있습니다
+  - 10,000자를 넘을 수 없고, 같은 날 안에서는 줄일 수 없습니다
+  - 메모를 쓰거나 늘릴 때는 같은 batch에서 사용량이 정확히 그만큼 늘어나야 합니다
+- 예전 저장 위치(`users/{uid}/memos`)는 본인 읽기/삭제만 허용합니다
 
-> 이 값들은 브라우저에 그대로 공개되는 값이라 커밋해도 됩니다. 실제 보안은 `firestore.rules` 가 담당합니다.
+## Firebase 설정
 
-### 3. 로컬 개발에서 사용 (선택)
-`npm run dev` 는 기본적으로 로컬 모드(브라우저 저장)로 동작합니다.
-개발 중에도 Firebase를 쓰려면 `.env.production` 내용을 `.env.local` 로 복사하세요 (`.env.local` 은 git에 올라가지 않음).
+Firebase 프로젝트: `recordish`. 설정값은 `.env.production`에 있습니다.
+
+> 이 값들(apiKey 등)은 브라우저에 그대로 공개되는 값이라 커밋해도 됩니다. 실제 보안은 보안 규칙이 담당합니다.
+
+### 처음 만들 때 (이미 완료)
+1. [Firebase 콘솔](https://console.firebase.google.com)에서 프로젝트 만들기 → **웹(`</>`) 앱 추가** → `firebaseConfig` 값을 `.env.production`에 넣기
+2. **Authentication → 로그인 방법 → Google** 사용 설정
+3. **Authentication → 설정 → 승인된 도메인**에 `recordish.github.io` 추가
+4. **Firestore Database → 데이터베이스 만들기** (프로덕션 모드, 위치 `asia-northeast3` 서울)
+
+### 보안 규칙 반영
+`firestore.rules`를 바꿨다면 **Firebase 콘솔 → Firestore Database → 규칙** 탭에 전체 내용을 붙여넣고 **게시**합니다.
+
+### 색인 만들기
+공개 메모를 최신순으로 20개씩 불러오려면 복합 색인이 필요합니다. 아래 링크를 열고 **색인 만들기**를 누르면 됩니다 (만드는 데 몇 분 걸림).
+
+https://console.firebase.google.com/v1/r/project/recordish/firestore/indexes?create_composite=Ckdwcm9qZWN0cy9yZWNvcmRpc2gvZGF0YWJhc2VzLyhkZWZhdWx0KS9jb2xsZWN0aW9uR3JvdXBzL21lbW9zL2luZGV4ZXMvXxABGgwKCGlzUHVibGljEAEaDQoJdXBkYXRlZEF0EAIaDAoIX19uYW1lX18QAg
+
+또는 Firebase CLI로 `npx firebase-tools deploy --only firestore:indexes --project recordish`
+
+### 로컬 개발에서 Firebase 쓰기
 ```bash
-cp .env.production .env.local
+cp .env.production .env.local   # .env.local 은 git에 올라가지 않음
 npm run dev
 ```
 
-에뮬레이터로 테스트하려면 `.env.local` 에 `VITE_USE_FIREBASE_EMULATOR=true` 를 넣고
-`npx firebase-tools emulators:start --only auth,firestore --project demo-memo` 를 함께 실행합니다.
-
-> 참고: Firebase 웹 설정값(apiKey 등)은 브라우저에 그대로 노출되는 공개 값입니다. 실제 보안은 보안 규칙이 담당합니다.
+**에뮬레이터로 테스트하기** (실제 데이터를 건드리지 않음): `.env.local`에 `VITE_USE_FIREBASE_EMULATOR=true`를 넣고 아래를 함께 실행합니다.
+```bash
+npx firebase-tools emulators:start --only auth,firestore --project demo-memo
+```
+에뮬레이터는 `firestore.rules`와 `firestore.indexes.json`을 그대로 읽어서 실제와 같은 규칙으로 동작합니다.
