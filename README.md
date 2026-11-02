@@ -78,6 +78,7 @@ recordish.github.io/
     │   ├── MemoEditor.jsx      #   메모 입력창 + 글자 수 + 공개/비공개 선택
     │   ├── MemoItem.jsx
     │   ├── MemoList.jsx
+    │   ├── MoreMenu.jsx           # 점 세 개(⋮) 메뉴 (수정/삭제)
     │   ├── VisibilityToggle.jsx   # 🔒 비공개 / 🌐 공개 버튼
     │   ├── GoogleSignInButton.jsx # Google 스타일 로그인 버튼
     │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 공개 메모로)
