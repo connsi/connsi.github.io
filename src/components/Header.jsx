@@ -11,8 +11,8 @@ export default function Header() {
   return (
     <header className="header">
       <div className="left">
-        <Link to="/" className="logo">📝 Recordish</Link>
-        <NavLink to="/" end className="tab">전체</NavLink>
+        {/* 로고를 누르면 전체 화면(모두의 공개 + 내 비공개)으로 갑니다 */}
+        <Link to="/" className="logo" title="전체 메모">📝 Recordish</Link>
         <NavLink to={minePath} className="tab">비공개</NavLink>
         <NavLink to="/public" className="tab">공개</NavLink>
       </div>
