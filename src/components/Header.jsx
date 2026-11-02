@@ -4,7 +4,7 @@ import { isFirebaseConfigured } from '../firebase/config'
 
 export default function Header() {
   const { user } = useAuth()
-  // 로그인하지 않은 방문자가 '나만 보기'를 누르면 로그인 화면으로 갑니다.
+  // 로그인하지 않은 방문자가 '나만보기'를 누르면 로그인 화면으로 갑니다.
   const minePath = isFirebaseConfigured && !user ? '/login' : '/mine'
 
   return (
@@ -12,7 +12,7 @@ export default function Header() {
       <div className="left">
         {/* 로고를 누르면 전체 화면(모두의 공개 + 내 비공개)으로 갑니다 */}
         <Link to="/" className="logo" title="전체 메모">📝 Recordish</Link>
-        <NavLink to={minePath} className="tab">나만 보기</NavLink>
+        <NavLink to={minePath} className="tab">나만보기</NavLink>
         <NavLink to="/public" className="tab">둘러보기</NavLink>
       </div>
       <nav>
