@@ -2,6 +2,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom'
 import Header from './components/Header'
 import ProtectedRoute from './components/ProtectedRoute'
 import { AuthProvider } from './contexts/AuthContext'
+import AccountPage from './pages/AccountPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import FeedPage from './pages/FeedPage'
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/" element={<FeedPage key="all" mode="all" />} />
             <Route path="/mine" element={<ProtectedRoute><FeedPage key="mine" mode="mine" /></ProtectedRoute>} />
             <Route path="/public" element={<FeedPage key="public" mode="public" />} />
+            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

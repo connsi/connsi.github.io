@@ -50,6 +50,17 @@ a { color: var(--primary-text); text-decoration: none; }
 .notice a { font-weight: 600; }
 .badge { font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
 .user { font-size: 14px; color: var(--muted); }
+a.user:hover, a.user.active { color: var(--text); }
+
+/* 계정 화면 */
+.account { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.account-info { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 14px; }
+.account-info dt { color: var(--muted); }
+.account-info dd { margin: 0; word-break: break-all; }
+.danger-zone { width: 100%; margin-top: 24px; padding: 16px; border: 1px solid var(--danger); border-radius: 8px; background: var(--card); box-sizing: border-box; }
+.danger-zone h3 { margin: 0 0 6px; font-size: 16px; color: var(--danger); }
+.danger-zone p { margin: 0 0 12px; font-size: 14px; color: var(--muted); }
+.links { font-size: 13px; color: var(--muted); margin-top: 16px; }
 
 .container { max-width: 720px; margin: 0 auto; padding: 16px; }
 

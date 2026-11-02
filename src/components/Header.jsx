@@ -21,7 +21,7 @@ export default function Header() {
         {isFirebaseConfigured &&
           (user ? (
             <>
-              <span className="user">{user.displayName ?? user.email}</span>
+              <NavLink to="/account" className="user" title="계정">{user.displayName ?? user.email}</NavLink>
               <button onClick={logout}>로그아웃</button>
             </>
           ) : (

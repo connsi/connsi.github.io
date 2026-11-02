@@ -28,6 +28,9 @@ export default function LoginPage() {
       <h2>로그인</h2>
       <GoogleSignInButton onClick={handleLogin} disabled={busy} />
       {error && <p className="error">{error}</p>}
+      <p className="links">
+        로그인하면 <a href="/privacy.html">개인정보처리방침</a>에 동의하는 것으로 봅니다.
+      </p>
     </div>
   )
 }
