@@ -135,16 +135,13 @@ export default function AccountPage() {
 
       <button type="button" onClick={handleLogout}>로그아웃</button>
 
-      <section className="danger-zone">
-        <h3>계정 삭제</h3>
-        <p>계정을 삭제하면 공개·비공개 메모를 포함한 모든 데이터가 바로 삭제되며 되돌릴 수 없습니다.</p>
-        <button type="button" className="danger" onClick={handleDelete} disabled={deleting}>
-          {deleting ? '삭제 중…' : '계정 삭제'}
-        </button>
-      </section>
-
-      <p className="links">
+      {/* 계정 삭제는 눈에 띄지 않게 하단 링크 옆에 둡니다 (누르면 확인창이 한 번 더 뜸) */}
+      <p className="links footer-links">
         <a href="/privacy.html">개인정보처리방침</a>
+        <span aria-hidden="true">·</span>
+        <button type="button" className="link-button" onClick={handleDelete} disabled={deleting}>
+          {deleting ? '계정 삭제 중…' : '계정 삭제'}
+        </button>
       </p>
     </div>
   )
