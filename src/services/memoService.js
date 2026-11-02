@@ -186,3 +186,19 @@ export async function deleteMemo(user, id) {
   }
   writeAll(readAll().filter((m) => m.id !== id))
 }
+
+// 회원 탈퇴용: 내 메모(공개·비공개 전부), 하루 사용량, 예전 위치의 메모를 모두 지웁니다.
+// 한 번에 지울 수 있는 개수(500)를 넘지 않도록 나눠서 지웁니다.
+export async function deleteAllMyData(user) {
+  if (!isCloud(user)) return
+  const refs = [
+    ...(await getDocs(query(memosCol(), where('uid', '==', user.uid)))).docs.map((d) => d.ref),
+    ...(await getDocs(collection(db, 'users', user.uid, 'memos'))).docs.map((d) => d.ref),
+    usageRef(user.uid),
+  ]
+  for (let i = 0; i < refs.length; i += 400) {
+    const batch = writeBatch(db)
+    refs.slice(i, i + 400).forEach((ref) => batch.delete(ref))
+    await batch.commit()
+  }
+}

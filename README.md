@@ -24,6 +24,26 @@ React + Vite로 만든 메모 웹 앱입니다. Google 계정으로 로그인하
 - 공개 메모는 20개씩 **더 보기**로 이어서 불러옵니다
 - 3줄이 넘는 긴 메모는 말줄임(…)으로 줄여 보여주고, **더보기 / 접기**로 펼치고 접을 수 있습니다
 
+## 계정 · 개인정보
+
+- 오른쪽 위 **내 이름**을 누르면 **계정** 화면(`#/account`)이 열립니다: 로그인 계정, 공개 이름(가입 일시 번호), 로그아웃, **회원 탈퇴**
+- **회원 탈퇴**: 내 메모(공개·비공개 전부), 하루 사용량, 예전 위치 메모, 로그인 계정을 모두 즉시 삭제합니다 (`deleteAccount`, `deleteAllMyData`)
+  - Firebase가 최근 로그인을 요구하면 Google 로그인 창을 한 번 더 띄운 뒤 삭제합니다
+- **개인정보처리방침**: https://recordish.github.io/privacy.html (`public/privacy.html`, 로그인 없이 볼 수 있는 정적 페이지)
+  - 계정·데이터 삭제 안내: https://recordish.github.io/privacy.html#delete
+  - ⚠️ **문의 이메일이 아직 "(준비 중)"입니다. 출시 전에 채워야 합니다**
+
+## 앱 (PWA / 안드로이드)
+
+- **PWA**: `public/manifest.webmanifest`(앱 이름·아이콘·색), `public/sw.js`(서비스 워커), `public/offline.html`(오프라인 안내)
+  - 화면(HTML)은 항상 최신을 네트워크에서 받고, 인터넷이 끊기면 오프라인 안내를 보여줍니다
+  - `/assets/*`(버전이 붙은 빌드 파일)만 기기에 저장해 다시 씁니다. Firebase 요청은 건드리지 않습니다
+  - 서비스 워커는 배포 빌드에서만 등록됩니다 (`src/main.jsx`)
+- **아이콘**: `public/icons/` (192·512 일반, 512 maskable, 180 iPhone), 구글 플레이 스토어용 512 아이콘은 `store/`
+- **안드로이드 앱**: 구글 플레이용 TWA(Trusted Web Activity), 패키지 이름 `com.recordish.app`
+  - 앱은 사이트를 그대로 띄우므로, 사이트를 배포하면 앱도 바로 최신이 됩니다
+  - 앱 상단 주소창을 숨기려면 `public/.well-known/assetlinks.json`에 앱 서명 인증서 지문(SHA-256)을 넣어야 합니다
+
 ## 실행 방법
 
 Node.js 20.19+ 또는 22.12+ 가 필요합니다.
@@ -68,7 +88,13 @@ recordish.github.io/
 ├── firestore.rules             # Firestore 보안 규칙
 ├── firestore.indexes.json      # Firestore 색인 (공개 메모 최신순 정렬)
 ├── public/
-│   └── favicon.svg             # 탭 아이콘
+│   ├── favicon.svg             # 탭 아이콘
+│   ├── icons/                  # 앱 아이콘 (PNG)
+│   ├── manifest.webmanifest    # PWA 앱 정보
+│   ├── sw.js                   # 서비스 워커
+│   ├── offline.html            # 오프라인 안내 화면
+│   └── privacy.html            # 개인정보처리방침
+├── store/                      # 구글 플레이 스토어용 이미지 (배포 안 됨)
 └── src/
     ├── main.jsx                # 진입점
     ├── App.jsx                 # 라우팅 + AuthProvider
@@ -99,6 +125,7 @@ recordish.github.io/
     │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 로그인 화면으로)
     └── pages/                  # 라우트 단위 화면
         ├── FeedPage.jsx        #   전체(#/) · 비공개(#/mine) · 공개(#/public)
+        ├── AccountPage.jsx     #   계정 · 회원 탈퇴 (#/account)
         ├── LoginPage.jsx       #   로그인 (#/login)
         └── NotFoundPage.jsx
 ```
@@ -124,7 +151,7 @@ recordish.github.io/
 - 공개 메모는 누구나 읽을 수 있고, 비공개 메모는 작성자만 읽을 수 있습니다
 - 작성, 수정, 삭제는 작성자만 할 수 있고, 작성자(`uid`)는 바꿀 수 없습니다. 필드 타입도 검사합니다
 - 하루 글자 사용량(`usage/{uid}`)
-  - 본인만 읽고 쓸 수 있고, 오늘 날짜로만 기록할 수 있습니다
+  - 본인만 읽고 쓰고 지울 수 있고(지우기는 회원 탈퇴용), 오늘 날짜로만 기록할 수 있습니다
   - 10,000자를 넘을 수 없고, 같은 날 안에서는 줄일 수 없습니다
   - 메모를 쓰거나 늘릴 때는 같은 batch에서 사용량이 정확히 그만큼 늘어나야 합니다
 - 예전 저장 위치(`users/{uid}/memos`)는 본인 읽기/삭제만 허용합니다
