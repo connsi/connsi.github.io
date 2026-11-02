@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { fullDateTime, relativeTime } from '../utils/relativeTime'
+import MemoContent from './MemoContent'
 import MemoEditor from './MemoEditor'
 import MoreMenu from './MoreMenu'
 
@@ -27,7 +28,7 @@ export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = fal
 
   return (
     <li className="memo">
-      <p>{memo.content}</p>
+      <MemoContent content={memo.content} />
       <div className="meta">
         <span className="info">
           {showAuthor && <span className="author">{memo.authorName || '익명'}</span>}
