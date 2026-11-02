@@ -64,6 +64,7 @@ recordish.github.io/
     │   ├── MemoEditor.jsx
     │   ├── MemoItem.jsx
     │   ├── MemoList.jsx
+    │   ├── GoogleSignInButton.jsx  # Google 스타일 로그인 버튼
     │   ├── ProtectedRoute.jsx
     │   └── VisibilityToggle.jsx  # 비공개/공개 선택
     └── pages/              # 라우트 단위 화면
