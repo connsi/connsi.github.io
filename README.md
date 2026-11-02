@@ -29,9 +29,7 @@ npm run dev      # 개발 서버 실행 → http://localhost:5173
 
 Actions 탭에서 **Deploy to GitHub Pages** 워크플로를 직접 다시 실행할 수도 있습니다(Run workflow).
 
-Firebase를 붙인 뒤에는 배포된 앱에서도 Firebase를 쓰도록
-**Settings → Secrets and variables → Actions** 에 `.env.example`과 같은 이름(`VITE_FIREBASE_*`)으로
-값을 등록하세요. 등록하지 않으면 배포된 앱은 로컬 모드로 동작합니다.
+배포된 앱은 `.env.production` 의 Firebase 설정값을 사용합니다 (아래 "Firebase 연결하기" 참고).
 
 ## 폴더 구조
 
@@ -41,7 +39,8 @@ recordish.github.io/
 │   └── deploy.yml          # GitHub Pages 자동 배포
 ├── index.html
 ├── vite.config.js
-├── .env.example            # Firebase 설정값 예시 (복사해서 .env.local 로 사용)
+├── .env.production         # 배포용 Firebase 설정값
+├── .env.example            # Firebase 설정값 예시
 ├── firebase.json           # Firebase CLI/에뮬레이터 설정
 ├── firestore.rules         # Firestore 보안 규칙
 ├── public/                 # 그대로 복사되는 정적 파일 (favicon 등)
@@ -89,23 +88,17 @@ recordish.github.io/
 5. **Firestore Database → 데이터베이스 만들기** (프로덕션 모드)
 6. **Firestore Database → 규칙** 탭에 `firestore.rules` 내용을 붙여넣고 **게시**
 
-### 2. 배포된 사이트에 연결
-저장소 **Settings → Secrets and variables → Actions → New repository secret** 에서 아래 6개를 등록합니다.
+### 2. 설정값 넣기
+`firebaseConfig` 값은 저장소의 **`.env.production`** 에 들어 있습니다. 배포할 때(`npm run build`) 이 값을 읽습니다.
+다른 Firebase 프로젝트로 바꾸려면 이 파일의 값만 바꾸고 `main`에 머지하면 됩니다.
 
-| Secret 이름 | firebaseConfig 항목 |
-| --- | --- |
-| `VITE_FIREBASE_API_KEY` | `apiKey` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | `authDomain` |
-| `VITE_FIREBASE_PROJECT_ID` | `projectId` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | `storageBucket` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | `messagingSenderId` |
-| `VITE_FIREBASE_APP_ID` | `appId` |
-
-등록 후 Actions 탭에서 **Deploy to GitHub Pages → Run workflow** 로 다시 배포하면 적용됩니다.
+> 이 값들은 브라우저에 그대로 공개되는 값이라 커밋해도 됩니다. 실제 보안은 `firestore.rules` 가 담당합니다.
 
 ### 3. 로컬 개발에서 사용 (선택)
+`npm run dev` 는 기본적으로 로컬 모드(브라우저 저장)로 동작합니다.
+개발 중에도 Firebase를 쓰려면 `.env.production` 내용을 `.env.local` 로 복사하세요 (`.env.local` 은 git에 올라가지 않음).
 ```bash
-cp .env.example .env.local   # 같은 값 채우기 (.env.local 은 git에 올라가지 않음)
+cp .env.production .env.local
 npm run dev
 ```
 
