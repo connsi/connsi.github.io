@@ -4,7 +4,9 @@
   --text: #1f2328;
   --muted: #6b7280;
   --border: #e5e7eb;
-  --primary: #4f46e5;
+  --primary: #5bb0f0;        /* 포인트 컬러: 연한 블루 */
+  --on-primary: #0b2a45;     /* 포인트 컬러 위 글자 */
+  --primary-text: #1a73b8;   /* 흰 배경 위 파란 글자(링크, 태그) */
   --danger: #dc2626;
   font-family: system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
   color: var(--text);
@@ -17,13 +19,15 @@
     --text: #e6e7ea;
     --muted: #9aa0aa;
     --border: #2c3039;
-    --primary: #818cf8;
+    --primary: #7cc4fa;
+    --on-primary: #0b2a45;
+    --primary-text: #7cc4fa;
     --danger: #f87171;
   }
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); }
-a { color: var(--primary); text-decoration: none; }
+a { color: var(--primary-text); text-decoration: none; }
 
 .header {
   display: flex; justify-content: space-between; align-items: center;
@@ -44,7 +48,7 @@ button {
   font: inherit; padding: 6px 12px; border-radius: 6px; cursor: pointer;
   border: 1px solid var(--border); background: var(--card); color: var(--text);
 }
-button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+button.primary { background: var(--primary); border-color: var(--primary); color: var(--on-primary); font-weight: 600; }
 button:disabled { opacity: 0.6; cursor: default; }
 button.danger { color: var(--danger); }
 
@@ -58,11 +62,11 @@ button.danger { color: var(--danger); }
 .visibility { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .visibility button { border: none; border-radius: 0; font-size: 14px; color: var(--muted); }
 .visibility button + button { border-left: 1px solid var(--border); }
-.visibility button.on { background: var(--primary); color: #fff; }
+.visibility button.on { background: var(--primary); color: var(--on-primary); font-weight: 600; }
 .memo .info { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .author { font-weight: 600; color: var(--text); }
 .tag { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
-.tag.public { color: var(--primary); border-color: var(--primary); }
+.tag.public { color: var(--primary-text); border-color: var(--primary); }
 
 .memo-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 12px; }
 .memo { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
