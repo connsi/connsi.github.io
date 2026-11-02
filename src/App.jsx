@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
+import PublicPage from './pages/PublicPage'
 
 // GitHub Pages는 SPA 라우팅(새로고침 시 404)을 지원하지 않아서 HashRouter를 씁니다.
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
         <main className="container">
           <Routes>
             <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+            <Route path="/public" element={<PublicPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
