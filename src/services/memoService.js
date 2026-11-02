@@ -2,8 +2,9 @@
 // - Firebase가 설정된 경우: Firestore
 //     memos/{memoId}  { uid, authorName, content, isPublic, createdAt, updatedAt }
 //     usage/{uid}     { day: 20261102, chars: 1234 }  ← 오늘(한국 시간) 쓴 글자 수
-//   · 내 메모: uid == 내 uid (브라우저에서 정렬)
+//   · 내 비공개 메모: uid == 내 uid && isPublic == false (전부 불러와 브라우저에서 정렬)
 //   · 공개 메모: isPublic == true, 최신순 20개씩 (복합 색인 필요: isPublic + updatedAt desc)
+//   · 전체 화면(/)은 위 두 가지를 합쳐서 보여줍니다 (hooks/useMemos.js)
 //   · 하루 글자 제한: 새 메모는 글자 수 전체, 수정은 늘어난 글자 수만큼 오늘 사용량에 더합니다.
 //     보안 규칙(firestore.rules)이 서버에서도 같은 계산을 검사합니다.
 // - 그 외(로컬 모드): 브라우저 localStorage (글자 제한 없음)
@@ -106,14 +107,16 @@ async function syncAuthorName(user, memos) {
 }
 
 // ---------- 공개 함수 ----------
-export async function getMyMemos(user) {
+// 내 비공개 메모 전부 (최신순)
+export async function getMyPrivateMemos(user) {
   if (isCloud(user)) {
-    const snap = await getDocs(query(memosCol(), where('uid', '==', user.uid)))
+    const snap = await getDocs(query(memosCol(), where('uid', '==', user.uid), where('isPublic', '==', false)))
     const memos = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
     await syncAuthorName(user, memos)
     return memos.sort(byNewest)
   }
-  return readAll().sort(byNewest)
+  if (db) return [] // Firebase 모드인데 로그인 전
+  return readAll().filter((m) => !m.isPublic).sort(byNewest)
 }
 
 // 공개 메모를 최신순으로 PAGE_SIZE 개씩 가져옵니다.

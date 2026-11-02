@@ -10,6 +10,18 @@ React + Vite로 만든 메모 웹 앱입니다. Google 계정으로 로그인하
 - **내 메모**: 메모 작성, 수정, 삭제. 로그인한 본인만 볼 수 있습니다
 - **🔒 비공개 / 🌐 공개 선택**: 기본은 비공개이고, 공개로 고른 메모는 **공개 메모** 화면에 올라갑니다
 
+## 화면
+
+| 주소 | 탭 | 보이는 메모 | 로그인하지 않으면 |
+| --- | --- | --- | --- |
+| `#/` | 전체 | 모두의 공개 메모 + 내 비공개 메모 (최신순으로 섞어서) | 공개 메모만 |
+| `#/mine` | 비공개 | 내 비공개 메모만 | 로그인 화면으로 이동 |
+| `#/public` | 공개 | 모두의 공개 메모만 | 그대로 볼 수 있음 |
+
+- 메모 입력창은 **전체**와 **비공개** 화면에 있습니다 (기본값 비공개)
+- 내가 쓴 메모에만 ⋮(수정/삭제) 메뉴가 붙습니다. 공개 메모에는 작성자 번호, 비공개 메모에는 자물쇠가 보입니다
+- 공개 메모는 20개씩 **더 보기**로 이어서 불러옵니다
+
 ## 실행 방법
 
 Node.js 20.19+ 또는 22.12+ 가 필요합니다.
@@ -67,24 +79,23 @@ recordish.github.io/
     ├── contexts/
     │   └── AuthContext.jsx     # 로그인 사용자 전역 상태
     ├── hooks/
-    │   ├── useMemos.js         # useMyMemos(내 메모), usePublicMemos(공개 메모 + 더 보기)
+    │   ├── useMemos.js         # useFeed(전체/비공개/공개 목록 + 더 보기 + 작성·수정·삭제)
     │   └── useNow.js           # "3분 전" 표시 갱신용 현재 시각
     ├── utils/
     │   ├── authorId.js         # 공개 작성자 번호 (가입 일시)
     │   ├── relativeTime.js     # "방금 전 / 3분 전 / 2일 전" 변환
     │   └── text.js             # 글자 수 세기, 하루 글자 한도(10,000)
     ├── components/             # 재사용 UI 컴포넌트
-    │   ├── Header.jsx          #   앱 이름(Recordish), 내 메모/공개 메모 탭
+    │   ├── Header.jsx          #   앱 이름(Recordish), 전체/비공개/공개 탭
     │   ├── MemoEditor.jsx      #   메모 입력창 + 글자 수 + 공개/비공개 선택
     │   ├── MemoItem.jsx
     │   ├── MemoList.jsx
     │   ├── MoreMenu.jsx           # 점 세 개(⋮) 메뉴 (수정/삭제)
     │   ├── VisibilityToggle.jsx   # 🔒 비공개 / 🌐 공개 버튼
     │   ├── GoogleSignInButton.jsx # Google 스타일 로그인 버튼
-    │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 공개 메모로)
+    │   └── ProtectedRoute.jsx     # 로그인 필요 화면 (비로그인은 로그인 화면으로)
     └── pages/                  # 라우트 단위 화면
-        ├── HomePage.jsx        #   내 메모 (#/)
-        ├── PublicPage.jsx      #   공개 메모 (#/public)
+        ├── FeedPage.jsx        #   전체(#/) · 비공개(#/mine) · 공개(#/public)
         ├── LoginPage.jsx       #   로그인 (#/login)
         └── NotFoundPage.jsx
 ```
@@ -98,9 +109,11 @@ recordish.github.io/
 | `memos/{memoId}` | `{ uid, authorName, content, isPublic, createdAt, updatedAt }` |
 | `usage/{uid}` | `{ day: 20261102, chars: 1234 }` — 오늘(한국 시간) 쓴 글자 수 |
 
-- **내 메모**: `uid == 내 uid`로 불러와 브라우저에서 최신순으로 정렬합니다
+- **내 비공개 메모**: `uid == 내 uid` && `isPublic == false`로 전부 불러와 브라우저에서 최신순으로 정렬합니다
 - **공개 메모**: `isPublic == true`, `updatedAt` 내림차순, 21개씩 읽어서 20개를 보여주고 다음 페이지가 있는지 판단합니다
   → 복합 색인(`isPublic` 오름차순 + `updatedAt` 내림차순)이 필요합니다 (`firestore.indexes.json`)
+- **전체**: 위 두 목록을 합칩니다. 공개 메모가 더 남아 있으면, 마지막으로 불러온 공개 메모보다 오래된 비공개 메모는
+  숨겨 두었다가 **더 보기**를 누를 때 함께 보여줘서 항상 최신순으로 섞이게 합니다 (`useFeed`, `src/hooks/useMemos.js`)
 - **메모 작성·수정**: 메모와 `usage/{uid}`를 한 번에(batch) 저장합니다. 보안 규칙이 사용량이 정확히 늘었는지 확인합니다
 
 ### 보안 규칙 요약 (`firestore.rules`)
