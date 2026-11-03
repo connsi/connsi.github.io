@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { charCount } from '../utils/text'
 import VisibilityToggle from './VisibilityToggle'
 
 export default function MemoEditor({ initial = { content: '', isPublic: false }, onSubmit, onCancel, submitLabel = '저장' }) {
@@ -7,7 +6,6 @@ export default function MemoEditor({ initial = { content: '', isPublic: false },
   const [isPublic, setIsPublic] = useState(initial.isPublic === true)
   const [saving, setSaving] = useState(false)
   const isNew = !onCancel
-  const count = charCount(content)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -31,7 +29,6 @@ export default function MemoEditor({ initial = { content: '', isPublic: false },
   return (
     <form className="editor" onSubmit={handleSubmit}>
       <textarea placeholder="메모를 입력하세요" rows={4} value={content} onChange={(e) => setContent(e.target.value)} />
-      <div className="counter">{count.toLocaleString()}자</div>
       <div className="editor-footer">
         <VisibilityToggle isPublic={isPublic} onChange={setIsPublic} />
         <div className="actions">
