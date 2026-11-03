@@ -83,11 +83,8 @@ async function chargeChars(user, added) {
   const used = await getUsedToday(user)
   const next = used + added
   if (next > DAILY_CHAR_LIMIT) {
-    const left = Math.max(0, DAILY_CHAR_LIMIT - used)
-    throw new DailyLimitError(
-      `하루에 쓸 수 있는 글자(${DAILY_CHAR_LIMIT.toLocaleString()}자)를 넘었어요.\n` +
-        `오늘 남은 글자: ${left.toLocaleString()}자 (이번 메모: ${added.toLocaleString()}자)`,
-    )
+    // 하루 글자 한도는 사용자에게 숫자나 존재를 밝히지 않습니다 (남용 방지용 내부 제한)
+    throw new DailyLimitError('지금은 이 메모를 저장할 수 없어요. 나중에 다시 시도해 주세요.')
   }
   return { day: todayKey(), chars: next }
 }

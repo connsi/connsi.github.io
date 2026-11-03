@@ -68,7 +68,7 @@ export function useFeed(mode) {
     return [...publicMemos, ...privateMemos].sort((a, b) => b.updatedAt - a.updatedAt)
   }, [publicMemos, privateMemos])
 
-  // 저장 공간 초과, 하루 글자 한도, 네트워크 오류 등으로 실패하면 알리고 false 를 돌려줍니다.
+  // 저장 공간 초과, 내부 제한, 네트워크 오류 등으로 실패하면 알리고 false 를 돌려줍니다.
   const run = async (action) => {
     try {
       await action()
