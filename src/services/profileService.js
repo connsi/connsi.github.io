@@ -1,10 +1,10 @@
 // 내 프로필: profiles/{uid} = { name, visitCount, lastVisitAt, prevVisitAt }
-// - name: 공개 메모에 표시되는 이름. 없으면(null) 기본값 = 가입 일시 12자리 숫자
+// - name: 공개 메모에 표시되는 이름. 없으면(null) 기본값 = "Running Wolf" 같은 영어 이름 (utils/defaultName.js)
 // - visitCount: 접속 횟수 (앱을 열 때마다 1, 같은 창에서 새로고침은 세지 않음)
 // - lastVisitAt: 이번 접속 시각 / prevVisitAt: 그 전 접속 시각 (마이페이지의 "마지막 접속")
 import { collection, doc, getDoc, getDocs, query, setDoc, where, writeBatch } from 'firebase/firestore/lite'
 import { db } from '../firebase/config'
-import { signupId } from '../utils/authorId'
+import { natureName } from '../utils/defaultName'
 
 export const NAME_MAX = 20
 const profileRef = (uid) => doc(db, 'profiles', uid)
@@ -12,7 +12,7 @@ const profileRef = (uid) => doc(db, 'profiles', uid)
 // 지금 로그인한 사람의 프로필을 기억해 둡니다 (메모 작성 때 이름을 바로 쓰기 위해)
 let cache = { uid: null, data: null }
 
-export const defaultName = (user) => signupId(user)
+export const defaultName = (user) => natureName(user?.uid)
 
 export async function loadProfile(user) {
   if (!db || !user) return null

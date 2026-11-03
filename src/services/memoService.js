@@ -35,7 +35,7 @@ const isCloud = (user) => Boolean(db && user)
 const memosCol = () => collection(db, 'memos')
 const usageRef = (uid) => doc(db, 'usage', uid)
 const byNewest = (a, b) => b.updatedAt - a.updatedAt
-// 공개 메모의 작성자 이름: 마이페이지에서 정한 이름, 없으면 가입 일시 12자리 숫자
+// 공개 메모의 작성자 이름: 마이페이지에서 정한 이름, 없으면 "Running Wolf" 같은 기본 영어 이름
 const authorNameOf = (user) => getAuthorName(user)
 
 // 오늘 날짜(한국 시간)를 20261102 같은 숫자로. 보안 규칙의 today() 와 같은 계산입니다.
@@ -89,7 +89,7 @@ async function chargeChars(user, added) {
   return { day: todayKey(), chars: next }
 }
 
-// 작성자 이름이 지금 내 이름(마이페이지 이름 또는 가입 일시 번호)과 다른 메모를 맞춥니다.
+// 작성자 이름이 지금 내 이름(마이페이지 이름 또는 기본 영어 이름)과 다른 메모를 맞춥니다.
 // 수정 시각(updatedAt)은 그대로 둡니다. 실패해도 목록은 계속 보여줍니다.
 async function syncAuthorName(user, memos) {
   const name = await authorNameOf(user)
