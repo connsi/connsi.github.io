@@ -197,6 +197,7 @@ export async function deleteAllMyData(user) {
     ...(await getDocs(collection(db, 'users', user.uid, 'memos'))).docs.map((d) => d.ref),
     usageRef(user.uid),
     profileRef(user.uid),
+    doc(db, 'members', user.uid),
   ]
   for (let i = 0; i < refs.length; i += 400) {
     const batch = writeBatch(db)

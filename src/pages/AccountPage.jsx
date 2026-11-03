@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { deleteAccount, logout } from '../services/authService'
+import { deleteAccount, isEmailUser, logout } from '../services/authService'
 import { defaultName, NAME_MAX, updateName, validateName } from '../services/profileService'
 import { fullDateTime } from '../utils/relativeTime'
 
@@ -77,7 +77,7 @@ export default function AccountPage() {
           <dt>로그인 계정</dt>
           <dd>{user.email}</dd>
           <dt>로그인 방법</dt>
-          <dd>Google</dd>
+          <dd>{isEmailUser(user) ? '이메일 (초대 코드 가입)' : 'Google'}</dd>
         </dl>
       </section>
 

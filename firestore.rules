@@ -8,13 +8,46 @@ service cloud.firestore {
       return t.year() * 10000 + t.month() * 100 + t.day();
     }
 
+    // 쓰기 권한: Google 로그인 계정, 또는 초대 코드로 가입한(members 문서가 있는) 이메일 계정
+    function isMember() {
+      return request.auth != null
+        && (request.auth.token.firebase.sign_in_provider == 'google.com'
+            || exists(/databases/$(database)/documents/members/$(request.auth.uid)));
+    }
+
+    // ---------- 초대 코드: invites/{코드} = { maxUses, uses } (운영자가 Firebase 콘솔에서 만듦) ----------
+    // 로그인한 사람이 코드를 정확히 알 때만 읽을 수 있고(목록은 불가),
+    // 가입하는 순간 같은 batch로 members 문서를 만들면서 사용 횟수를 1만 올릴 수 있습니다.
+    match /invites/{code} {
+      allow get: if request.auth != null;
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uses'])
+        && request.resource.data.uses == resource.data.uses + 1
+        && request.resource.data.uses <= resource.data.maxUses
+        && !exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && getAfter(/databases/$(database)/documents/members/$(request.auth.uid)).data.code == code;
+    }
+
+    // ---------- 초대 가입 기록: members/{uid} = { code, joinedAt } ----------
+    // 이메일 계정 본인이, 같은 batch에서 그 코드의 사용 횟수를 1 올릴 때만 만들 수 있습니다 (수정 불가).
+    match /members/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.auth.token.firebase.sign_in_provider == 'password'
+        && request.resource.data.keys().hasOnly(['code', 'joinedAt'])
+        && request.resource.data.code is string
+        && request.resource.data.joinedAt is number
+        && getAfter(/databases/$(database)/documents/invites/$(request.resource.data.code)).data.uses
+             == get(/databases/$(database)/documents/invites/$(request.resource.data.code)).data.uses + 1;
+    }
+
     // ---------- 하루 글자 사용량: usage/{uid} = { day, chars } ----------
     // 본인만 읽고 쓸 수 있고, 오늘 날짜로만 기록하며, 1만 자를 넘을 수 없고,
     // 같은 날 안에서는 줄일 수 없습니다(사용량을 0으로 되돌리는 꼼수 방지).
     match /usage/{uid} {
       // 읽기와 삭제(회원 탈퇴)는 본인만
       allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow create, update: if request.auth != null && request.auth.uid == uid && isMember()
         && request.resource.data.keys().hasOnly(['day', 'chars'])
         && request.resource.data.day == today()
         && request.resource.data.chars is int
@@ -36,7 +69,7 @@ service cloud.firestore {
           && (d.get('prevVisitAt', null) == null || d.prevVisitAt is number);
       }
       allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow create, update: if request.auth != null && request.auth.uid == uid && isMember()
         && validProfile(request.resource.data);
     }
 
@@ -71,10 +104,10 @@ service cloud.firestore {
       }
 
       allow read: if resource.data.isPublic == true || isOwner(resource.data);
-      allow create: if isOwner(request.resource.data)
+      allow create: if isOwner(request.resource.data) && isMember()
         && isValid(request.resource.data)
         && charged(request.resource.data.content.size());
-      allow update: if isOwner(resource.data)
+      allow update: if isOwner(resource.data) && isMember()
         && request.resource.data.uid == resource.data.uid
         && isValid(request.resource.data)
         && charged(request.resource.data.content.size() - resource.data.content.size());

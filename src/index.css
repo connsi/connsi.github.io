@@ -75,6 +75,15 @@ a { color: var(--primary-text); text-decoration: none; }
 .name-form .error { margin: 0; font-size: 13px; }
 .links { font-size: 13px; color: var(--muted); margin-top: 16px; }
 .footer-links { display: flex; align-items: center; gap: 8px; }
+
+/* 테스터 가입·로그인 (#/invite) */
+.invite { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; max-width: 420px; }
+.invite-form { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.invite-form label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.invite-form input { font: inherit; font-size: 16px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); color: var(--text); }
+.invite-form .error { margin: 0; font-size: 14px; }
+.invite-form .hint { display: inline; }
+.invite-form button[type=submit] { align-self: flex-start; }
 .link-button { padding: 0; border: none; background: none; font: inherit; color: var(--muted); }
 .link-button:hover:not(:disabled) { color: var(--text); text-decoration: underline; }
 
