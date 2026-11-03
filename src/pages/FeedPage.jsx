@@ -5,11 +5,11 @@ import { useAuth } from '../contexts/AuthContext'
 import { isFirebaseConfigured } from '../firebase/config'
 import { useFeed } from '../hooks/useMemos'
 
-// showsPublic: 이 화면에 나오는 메모가 공개(true)인지 비공개(false)인지
+// hasEditor: 메모 입력창을 보여줄지 (공개메모 화면은 목록만)
 const PAGES = {
-  all: { title: '모두의 공개 메모', hideTitle: true, showsPublic: true, defaultPublic: false, empty: '아직 공개된 메모가 없습니다.' },
-  mine: { title: '🔒 나만보기', showsPublic: false, defaultPublic: false, empty: '아직 나만 보는 메모가 없습니다.' },
-  public: { title: '🌐 공개메모', showsPublic: true, defaultPublic: true, empty: '아직 공개한 메모가 없습니다.' },
+  all: { title: '모두의 공개 메모', hideTitle: true, hasEditor: true, empty: '아직 공개된 메모가 없습니다.' },
+  mine: { title: '🔒 나만보기', hasEditor: true, empty: '아직 나만 보는 메모가 없습니다.' },
+  public: { title: '🌐 공개메모', hasEditor: false, empty: '아직 공개한 메모가 없습니다.' },
 }
 
 // mode: 'all' (로고, /) | 'mine' (나만보기, /mine) | 'public' (공개메모, /public)
@@ -21,11 +21,11 @@ export default function FeedPage({ mode }) {
   const page = PAGES[mode]
   const navigate = useNavigate()
 
-  // 방금 쓴 메모가 이 화면에 나오지 않는 종류면, 그 메모가 보이는 화면으로 이동합니다
-  // (비공개 → 나만보기, 공개 → 공개메모. 로고 화면은 공개 메모가 보이므로 그대로)
+  // 메모를 쓰면 그 메모가 모이는 화면으로 이동합니다 (비공개 → 나만보기, 공개 → 공개메모)
   const handleAdd = async (data) => {
     const ok = await addMemo(data)
-    if (ok && data.isPublic !== page.showsPublic) navigate(data.isPublic ? '/public' : '/mine')
+    const target = data.isPublic ? '/public' : '/mine'
+    if (ok && target !== `/${mode}`) navigate(target)
     return ok
   }
 
@@ -36,7 +36,7 @@ export default function FeedPage({ mode }) {
           <Link to="/login">Google로 로그인</Link>하면 나만의 메모를 쓰고, 원하는 메모를 공개할 수 있어요.
         </p>
       )}
-      {canWrite && <MemoEditor key={mode} onSubmit={handleAdd} submitLabel="추가" defaultPublic={page.defaultPublic} />}
+      {canWrite && page.hasEditor && <MemoEditor key={mode} onSubmit={handleAdd} submitLabel="추가" />}
       {/* 로고 화면은 제목을 눈에 보이지 않게(화면 읽기 프로그램에는 읽히게) 둡니다 */}
       <h2 className={page.hideTitle ? 'sr-only' : 'page-title'}>{page.title}</h2>
       {error && <p className="error">메모를 불러오지 못했습니다: {error}</p>}
