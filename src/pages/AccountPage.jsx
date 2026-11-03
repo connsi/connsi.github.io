@@ -83,7 +83,7 @@ export default function AccountPage() {
 
       <section className="card">
         <h3>이름</h3>
-        <p className="hint">공개 메모에 작성자로 표시됩니다. 기본값은 가입 일시 12자리 숫자예요.</p>
+        <p className="hint">공개 메모에 작성자로 표시됩니다. 기본값은 자동으로 정해진 영어 이름이에요 (예: Running Wolf).</p>
         {editing ? (
           <form className="name-form" onSubmit={handleSave}>
             <input
