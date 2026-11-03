@@ -40,8 +40,6 @@ a { color: var(--primary-text); text-decoration: none; }
 .tab.active { color: var(--text); border-bottom-color: var(--primary); }
 .page-title { font-size: 18px; margin: 0 0 12px; }
 /* 입력창 바로 아래 제목은 위쪽 여백을 줍니다 (나만보기·공개메모 화면) */
-.saved-note { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
-.saved-note + .page-title { margin-top: 20px; }
 .editor + .page-title { margin-top: 28px; }
 /* 눈에는 안 보이고 화면 읽기 프로그램에는 읽히는 요소 */
 .sr-only {

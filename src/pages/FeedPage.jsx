@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import MemoEditor from '../components/MemoEditor'
 import MemoList from '../components/MemoList'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,18 +19,13 @@ export default function FeedPage({ mode }) {
   const isGuest = isFirebaseConfigured && !authLoading && !user
   const canWrite = !isFirebaseConfigured || Boolean(user)
   const page = PAGES[mode]
-  // 방금 쓴 메모가 이 화면에 나오지 않는 종류면 어디에 저장됐는지 알려줍니다
-  const [savedTo, setSavedTo] = useState(null)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (!savedTo) return
-    const id = setTimeout(() => setSavedTo(null), 5000)
-    return () => clearTimeout(id)
-  }, [savedTo])
-
+  // 방금 쓴 메모가 이 화면에 나오지 않는 종류면, 그 메모가 보이는 화면으로 이동합니다
+  // (비공개 → 나만보기, 공개 → 공개메모. 로고 화면은 공개 메모가 보이므로 그대로)
   const handleAdd = async (data) => {
     const ok = await addMemo(data)
-    if (ok) setSavedTo(data.isPublic === page.showsPublic ? null : data.isPublic ? 'public' : 'mine')
+    if (ok && data.isPublic !== page.showsPublic) navigate(data.isPublic ? '/public' : '/mine')
     return ok
   }
 
@@ -43,15 +37,6 @@ export default function FeedPage({ mode }) {
         </p>
       )}
       {canWrite && <MemoEditor key={mode} onSubmit={handleAdd} submitLabel="추가" defaultPublic={page.defaultPublic} />}
-      {savedTo && (
-        <p className="saved-note" role="status">
-          {savedTo === 'mine' ? (
-            <>🔒 <Link to="/mine">나만보기</Link>에 저장했어요.</>
-          ) : (
-            <>🌐 <Link to="/public">공개메모</Link>에 저장했어요.</>
-          )}
-        </p>
-      )}
       {/* 로고 화면은 제목을 눈에 보이지 않게(화면 읽기 프로그램에는 읽히게) 둡니다 */}
       <h2 className={page.hideTitle ? 'sr-only' : 'page-title'}>{page.title}</h2>
       {error && <p className="error">메모를 불러오지 못했습니다: {error}</p>}
