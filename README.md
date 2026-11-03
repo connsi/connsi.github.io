@@ -38,6 +38,25 @@ React + Vite로 만든 메모 웹 앱입니다. Google 계정으로 로그인하
   - 계정·데이터 삭제 안내: https://recordish.github.io/privacy.html#delete
   - ⚠️ **문의 이메일이 아직 "(준비 중)"입니다. 출시 전에 채워야 합니다**
 
+## 테스터 초대 가입 (`#/invite`)
+
+일반 사용자는 Google로 로그인하고, **테스터는 초대 코드로 이메일 계정을 만들어** 쓸 수 있습니다. 메뉴에는 보이지 않는 화면입니다.
+
+- https://recordish.github.io/#/invite → **초대 코드로 가입**(코드 + 이메일 + 비밀번호) / **이메일 로그인**
+- 초대 코드: Firestore `invites/{코드}` = `{ maxUses, uses }`. 운영자가 Firebase 콘솔에서 직접 만듭니다
+  - 가입할 때마다 `uses`가 1 늘고, `maxUses`에 닿으면 더 가입할 수 없습니다
+  - 코드는 입력할 때 대문자로 바꿔서 찾습니다. **문서 ID는 대문자로** 만들어 주세요 (예: `RCD-7F3K-9Q2M`)
+- 가입 기록: `members/{uid}` = `{ code, joinedAt }`. 가입과 동시에(같은 batch로) 코드 사용 횟수를 올릴 때만 만들 수 있습니다
+- **쓰기 권한**(메모·사용량·프로필)은 **Google 계정 또는 초대 가입 기록이 있는 계정**만 가집니다 (`isMember()`)
+  - 코드 없이 이메일 계정을 만들어도(코드를 보고 우회해도) 아무것도 쓸 수 없고, 앱도 자동으로 로그아웃시킵니다
+  - 잘못된 코드로 가입하면 방금 만든 계정을 바로 지웁니다
+- 계정 삭제 시 가입 기록(`members`)도 함께 지웁니다. 초대 코드의 사용 횟수는 되돌리지 않습니다
+
+**Firebase 콘솔 설정**
+1. Authentication → 로그인 방법 → **이메일/비밀번호** 사용 설정 (이메일 링크는 끔)
+2. Firestore Database → 데이터 → **컬렉션 시작** `invites` → 문서 ID에 코드(대문자), 필드 `maxUses`(number), `uses`(number, 0)
+3. `firestore.rules` 게시
+
 ## 앱 (PWA / 안드로이드)
 
 - **PWA**: `public/manifest.webmanifest`(앱 이름·아이콘·색), `public/sw.js`(서비스 워커), `public/offline.html`(오프라인 안내)
@@ -109,7 +128,7 @@ recordish.github.io/
     ├── services/               # 데이터/인증 접근 계층
     │   ├── memoService.js      #   메모 CRUD, 공개 메모 페이지, 하루 글자 사용량
     │   ├── profileService.js   #   이름, 접속 횟수·시각 (profiles/{uid})
-    │   └── authService.js      #   로그인/로그아웃 (Firebase Auth)
+    │   └── authService.js      #   Google 로그인, 초대 코드 가입·이메일 로그인, 로그아웃, 계정 삭제
     ├── contexts/
     │   └── AuthContext.jsx     # 로그인 사용자 전역 상태
     ├── hooks/
@@ -132,6 +151,7 @@ recordish.github.io/
     └── pages/                  # 라우트 단위 화면
         ├── FeedPage.jsx        #   로고(#/) · 나만보기(#/mine) · 공개메모(#/public)
         ├── AccountPage.jsx     #   마이페이지: 내 정보, 이름, 이용 기록, 로그아웃, 계정 삭제 (#/account)
+        ├── InvitePage.jsx      #   테스터 초대 가입 · 이메일 로그인 (#/invite, 메뉴에 없음)
         ├── LoginPage.jsx       #   로그인 (#/login)
         └── NotFoundPage.jsx
 ```
@@ -144,6 +164,8 @@ recordish.github.io/
 | --- | --- |
 | `memos/{memoId}` | `{ uid, authorName, content, isPublic, createdAt, updatedAt }` |
 | `usage/{uid}` | `{ day: 20261102, chars: 1234 }` — 오늘(한국 시간) 쓴 글자 수 |
+| `invites/{코드}` | `{ maxUses, uses }` — 테스터 초대 코드 (운영자가 콘솔에서 만듦) |
+| `members/{uid}` | `{ code, joinedAt }` — 초대 코드로 가입한 기록 |
 | `profiles/{uid}` | `{ name, visitCount, lastVisitAt, prevVisitAt }` — 이름(null이면 기본값), 접속 횟수, 이번·이전 접속 시각 |
 
 - **나만보기 / 공개메모**: `uid == 내 uid` && `isPublic == false / true`로 전부 불러와 브라우저에서 최신순으로 정렬합니다 (`getMyMemos`)
