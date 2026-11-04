@@ -2,7 +2,7 @@
 // - Firebase가 설정된 경우: Firestore
 //     memos/{memoId}  { uid, authorName, content, isPublic, createdAt, updatedAt }
 //     usage/{uid}     { day: 20261102, chars: 1234 }  ← 오늘(한국 시간) 쓴 글자 수
-//   · 모두의 공개 메모(로고, /): isPublic == true, 최신순 20개씩 (복합 색인 필요: isPublic + updatedAt desc)
+//   · 모두의 공개 메모(로고, /): isPublic == true, 작성 시각 최신순 20개씩 (복합 색인 필요: isPublic + createdAt desc)
 //   · 내 비공개 메모(나만보기, /mine), 내 공개 메모(공개메모, /public):
 //     uid == 내 uid && isPublic == false/true (전부 불러와 브라우저에서 정렬)
 //   · 하루 글자 제한: 새 메모는 글자 수 전체, 수정은 늘어난 글자 수만큼 오늘 사용량에 더합니다.
@@ -34,7 +34,9 @@ export const PAGE_SIZE = 20
 const isCloud = (user) => Boolean(db && user)
 const memosCol = () => collection(db, 'memos')
 const usageRef = (uid) => doc(db, 'usage', uid)
-const byNewest = (a, b) => b.updatedAt - a.updatedAt
+// 정렬은 작성 시각 기준 (수정해도 순서가 바뀌지 않음)
+const createdOf = (m) => m.createdAt ?? m.updatedAt ?? 0
+const byNewest = (a, b) => createdOf(b) - createdOf(a)
 // 공개 메모의 작성자 이름: 마이페이지에서 정한 이름, 없으면 "Running Wolf" 같은 기본 영어 이름
 const authorNameOf = (user) => getAuthorName(user)
 
@@ -117,12 +119,12 @@ export async function getMyMemos(user, isPublic) {
   return readAll().filter((m) => m.isPublic === isPublic).sort(byNewest)
 }
 
-// 공개 메모를 최신순으로 PAGE_SIZE 개씩 가져옵니다.
+// 공개 메모를 작성 시각 최신순으로 PAGE_SIZE 개씩 가져옵니다.
 // cursor: 이전 페이지가 돌려준 next 값 (첫 페이지는 생략)
 // 반환: { memos, next }  next 가 null 이면 더 없음
 export async function getPublicMemos(cursor = null) {
   if (db) {
-    const parts = [where('isPublic', '==', true), orderBy('updatedAt', 'desc')]
+    const parts = [where('isPublic', '==', true), orderBy('createdAt', 'desc')]
     if (cursor) parts.push(startAfter(cursor))
     parts.push(limit(PAGE_SIZE + 1)) // 하나 더 읽어서 다음 페이지가 있는지 확인
     const snap = await getDocs(query(memosCol(), ...parts))

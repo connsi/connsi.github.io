@@ -65,7 +65,9 @@ export function useFeed(mode) {
 
   const memos = useMemo(() => {
     // 로고 화면은 공개 메모 목록, 나머지는 내 메모 목록 (둘 중 하나만 채워집니다)
-    return [...publicMemos, ...privateMemos].sort((a, b) => b.updatedAt - a.updatedAt)
+    // 작성 시각 기준 최신순 (수정해도 순서가 바뀌지 않음)
+    const created = (m) => m.createdAt ?? m.updatedAt ?? 0
+    return [...publicMemos, ...privateMemos].sort((a, b) => created(b) - created(a))
   }, [publicMemos, privateMemos])
 
   // 저장 공간 초과, 내부 제한, 네트워크 오류 등으로 실패하면 알리고 false 를 돌려줍니다.

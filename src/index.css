@@ -112,6 +112,7 @@ button.danger { color: var(--danger); }
 .visibility button.on { background: var(--primary); color: var(--on-primary); font-weight: 700; }
 .memo .info { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .author { font-weight: 600; color: var(--text); }
+.edited { color: var(--muted); }
 .lock { display: inline-flex; color: var(--muted); }
 
 .memo-list { list-style: none; padding: 0; margin: 16px 0 0; display: flex; flex-direction: column; gap: 12px; }
