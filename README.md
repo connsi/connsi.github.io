@@ -169,8 +169,9 @@ recordish.github.io/
 | `profiles/{uid}` | `{ name, visitCount, lastVisitAt, prevVisitAt }` — 이름(null이면 기본값), 접속 횟수, 이번·이전 접속 시각 |
 
 - **나만보기 / 공개메모**: `uid == 내 uid` && `isPublic == false / true`로 전부 불러와 브라우저에서 최신순으로 정렬합니다 (`getMyMemos`)
-- **공개 메모**: `isPublic == true`, `updatedAt` 내림차순, 21개씩 읽어서 20개를 보여주고 다음 페이지가 있는지 판단합니다
-  → 복합 색인(`isPublic` 오름차순 + `updatedAt` 내림차순)이 필요합니다 (`firestore.indexes.json`)
+- **정렬**: 모든 목록은 **작성 시각(`createdAt`) 최신순**입니다. 수정해도 순서가 바뀌지 않고, 시간도 작성 시각으로 보여줍니다(수정한 메모에는 "· 수정됨")
+- **공개 메모**: `isPublic == true`, `createdAt` 내림차순, 21개씩 읽어서 20개를 보여주고 다음 페이지가 있는지 판단합니다
+  → 복합 색인(`isPublic` 오름차순 + `createdAt` 내림차순)이 필요합니다 (`firestore.indexes.json`)
 - **로고 화면**: 모두의 공개 메모를 위 방식으로 20개씩 불러옵니다 (`useFeed`, `src/hooks/useMemos.js`)
 - **메모 작성·수정**: 메모와 `usage/{uid}`를 한 번에(batch) 저장합니다. 보안 규칙이 사용량이 정확히 늘었는지 확인합니다
 

@@ -8,6 +8,9 @@ import MoreMenu from './MoreMenu'
 // showAuthor: 작성자 번호 표시 (공개 메모)
 export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = false, showAuthor = false }) {
   const [editing, setEditing] = useState(false)
+  // 시간은 작성 시각으로 보여주고, 작성 뒤 1분 넘게 지나 고친 메모에는 "수정됨"을 붙입니다
+  const createdAt = memo.createdAt ?? memo.updatedAt
+  const edited = memo.updatedAt - createdAt > 60 * 1000
 
   if (editing) {
     return (
@@ -40,9 +43,10 @@ export default function MemoItem({ memo, now, onUpdate, onDelete, readOnly = fal
               </svg>
             </span>
           )}
-          <time dateTime={new Date(memo.updatedAt).toISOString()} title={fullDateTime(memo.updatedAt)}>
-            {relativeTime(memo.updatedAt, now)}
+          <time dateTime={new Date(createdAt).toISOString()} title={`작성 ${fullDateTime(createdAt)}${edited ? `\n수정 ${fullDateTime(memo.updatedAt)}` : ''}`}>
+            {relativeTime(createdAt, now)}
           </time>
+          {edited && <span className="edited">· 수정됨</span>}
         </span>
         {!readOnly && (
           <MoreMenu
